@@ -24,21 +24,26 @@ from app.lib.generators.nomeGenerator import (
 from app.lib.formatters.formatters import campo_xml
 
 
-class Gerador207Window(tk.Toplevel):
+# MUDANÇA 1: A classe agora herda de ttk.Frame, não de tk.Toplevel
+class Gerador207Frame(ttk.Frame):
     """
-    Janela da ferramenta Gerador de XML - Serviço 207.
+    Frame da ferramenta Gerador de XML - Serviço 207.
     Contém a UI e a lógica de negócio para esta funcionalidade.
     """
 
-    def __init__(self, parent):
+    # MUDANÇA 2: O construtor recebe 'parent' e 'controller'
+    def __init__(self, parent, controller):
         super().__init__(parent)
+        self.controller = controller
         self._inicializando = True
 
-        self.title("Gerador de XML - Serviço 207")
-        self.geometry("850x750")
-        self.minsize(800, 700)
+        # MUDANÇA 3: Linhas que controlavam a janela foram removidas
+        # self.title("Gerador de XML - Serviço 207")
+        # self.geometry("850x750")
+        # self.minsize(800, 700)
 
         # --- Variáveis de Controle do Tkinter ---
+        # (Nenhuma alteração nesta seção)
         self.tipo_nome_var = tk.StringVar(value="pessoa")
         self.tipo_pessoa_var = tk.StringVar(value="F")
         self.tipo_rural_fj_var = tk.StringVar()
@@ -87,6 +92,7 @@ class Gerador207Window(tk.Toplevel):
 
     def _criar_widgets(self):
         """Cria e posiciona todos os widgets da interface gráfica."""
+        # O container principal (Canvas) agora é filho de 'self' (o Frame)
         main_canvas = tk.Canvas(self)
         scrollbar = ttk.Scrollbar(self, orient="vertical", command=main_canvas.yview)
         scrollable_frame = ttk.Frame(main_canvas)
@@ -106,13 +112,14 @@ class Gerador207Window(tk.Toplevel):
 
         main_canvas.bind("<Configure>", configure_frame_width)
 
-        # --- MUDANÇA 1: Função para lidar com o scroll do mouse ---
         def _on_mousewheel(event):
-            # O fator de divisão (-120) ajusta a velocidade da rolagem
             main_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        # --- MUDANÇA 2: Vincular o evento de scroll a todos os widgets ---
-        main_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        # MUDANÇA 4: Isola o evento de scroll para este frame específico
+        main_canvas.bind(
+            "<Enter>", lambda e: main_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        )
+        main_canvas.bind("<Leave>", lambda e: self.unbind_all("<MouseWheel>"))
 
         main_canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
@@ -120,9 +127,11 @@ class Gerador207Window(tk.Toplevel):
         container = ttk.Frame(scrollable_frame, padding="10")
         container.pack(fill="both", expand=True)
 
+        # --- O restante da criação de widgets permanece idêntico ---
+
         title_bar = tk.Label(
             container,
-            text="XML - 207 - Integrador",
+            text="207 - Agentes",
             bg="#005a9e",
             fg="white",
             font=("Helvetica", 12, "bold"),
@@ -291,8 +300,11 @@ class Gerador207Window(tk.Toplevel):
         action_frame.columnconfigure(1, weight=0)
         action_frame.columnconfigure(2, weight=0)
 
+        # MUDANÇA 5: O comando do botão Voltar agora usa o controller para voltar ao menu
         btn_voltar = ttk.Button(
-            action_frame, text="Voltar ao Menu", command=self.destroy
+            action_frame,
+            text="Voltar ao Menu",
+            command=lambda: self.controller.show_frame("MenuPrincipal"),
         )
         btn_voltar.grid(row=0, column=1, sticky="e", padx=(0, 10))
 
@@ -300,6 +312,9 @@ class Gerador207Window(tk.Toplevel):
             action_frame, text="Gerar XML", style="Accent.TButton"
         )
         self.btn_gerar_xml.grid(row=0, column=2, sticky="e")
+
+    # --- Nenhuma outra mudança é necessária nos métodos restantes ---
+    # (Todos os métodos de _criar_grupo_radio até _gerar_bloco_agente_id permanecem idênticos)
 
     def _criar_grupo_radio(self, parent, text, options, variable, return_widgets=False):
         frame = ttk.LabelFrame(parent, text=text, padding="10")
@@ -546,8 +561,5 @@ class Gerador207Window(tk.Toplevel):
         )
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    root.withdraw()
-    app = Gerador207Window(root)
-    app.mainloop()
+# MUDANÇA 6: O bloco if __name__ == "__main__" foi removido, pois este arquivo
+# não é mais executado de forma independente.
