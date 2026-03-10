@@ -1,0 +1,70 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Python tooling caches
+.cache/
+.pytest_cache/
+.pybuilder/
+.ruff_cache/
+.pyre/
+.pytype/
+.mypy_cache/
+
+# Python environments
+.Python
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Packaging and build artifacts
+build/
+dist/
+downloads/
+parts/
+sdist/
+var/
+share/python-wheels/
+target/
+*.spec
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Python package managers
+.pdm-python
+.pdm-build/
+.pixi/
+_pypackages_/
+
+# Environment and local configuration
+.env
+.env.*
+.envrc
+.pypirc
+
+# IDE/editor
+.vscode/
+
+# Logs and runtime outputs
+logs/
+*.log
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Local utilities and generated data
+Utils/
+*.json
+*.xml
+
+# Windows and external tools
+Thumbs.db
+desktop.ini
+*.bat
+*.exe
+upx.1

@@ -1,0 +1,9 @@
+# requirements.txt (versão limpa)
+
+# Dependências da Interface Gráfica
+customtkinter
+Pillow
+
+# Dependências de Rede e APIs
+requests
+zeep
