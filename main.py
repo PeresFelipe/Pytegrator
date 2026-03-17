@@ -99,7 +99,7 @@ class AppController(ctk.CTk):
 
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
-        self.configure(fg_color=c(COLOR_BG))
+        self.configure(fg_color=COLOR_BG)
 
         self.title(APP_NAME)
         self.geometry(f"{DEFAULT_WIDTH}x{DEFAULT_HEIGHT}")
@@ -119,6 +119,9 @@ class AppController(ctk.CTk):
         # Active nav button refs
         self._nav_buttons: Dict[str, ctk.CTkButton] = {}
 
+        # Theme state
+        self._is_dark: bool = True
+
         # Root grid: col 0 = sidebar (fixed), col 1 = content (expands)
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
@@ -134,11 +137,11 @@ class AppController(ctk.CTk):
     def _build_sidebar(self) -> None:
         sidebar = ctk.CTkFrame(
             self,
-            fg_color=c(SIDEBAR_BG),
+            fg_color=SIDEBAR_BG,
             corner_radius=0,
             width=SIDEBAR_WIDTH,
             border_width=1,
-            border_color=c(COLOR_BORDER),
+            border_color=COLOR_BORDER,
         )
         sidebar.grid(row=0, column=0, sticky="nsew")
         sidebar.grid_propagate(False)
@@ -154,7 +157,7 @@ class AppController(ctk.CTk):
             logo,
             text="P",
             font=ctk.CTkFont(size=16, weight="bold"),
-            text_color=c(COLOR_ACCENT),
+            text_color=COLOR_ACCENT,
             width=28,
         ).pack(side="left", padx=(0, 6))
 
@@ -162,12 +165,12 @@ class AppController(ctk.CTk):
             logo,
             text=APP_NAME,
             font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=c(COLOR_TEXT),
+            text_color=COLOR_TEXT,
         ).pack(side="left")
 
         # -- Top divider -----------------------------------------------------
         ctk.CTkFrame(
-            sidebar, fg_color=c(COLOR_BORDER), height=1, corner_radius=0
+            sidebar, fg_color=COLOR_BORDER, height=1, corner_radius=0
         ).grid(row=1, column=0, sticky="ew")
 
         # -- Navigation ------------------------------------------------------
@@ -183,7 +186,7 @@ class AppController(ctk.CTk):
                     nav,
                     text=NAV_SECTIONS.get(section, section.upper()),
                     font=ctk.CTkFont(size=10, weight="bold"),
-                    text_color=c(COLOR_TEXT_MUTED),
+                    text_color=COLOR_TEXT_MUTED,
                     anchor="w",
                 ).pack(anchor="w", padx=SPACE_SM, pady=(SPACE_MD, 2))
 
@@ -194,8 +197,8 @@ class AppController(ctk.CTk):
                 height=34,
                 corner_radius=RADIUS_MD,
                 fg_color="transparent",
-                hover_color=c(SIDEBAR_HOVER),
-                text_color=c(COLOR_TEXT_MUTED),
+                hover_color=SIDEBAR_HOVER,
+                text_color=COLOR_TEXT_MUTED,
                 font=ctk.CTkFont(size=FONT_SM),
                 command=lambda k=frame_key: self.show_frame(k),
             )
@@ -209,30 +212,49 @@ class AppController(ctk.CTk):
 
         # -- Footer divider --------------------------------------------------
         ctk.CTkFrame(
-            sidebar, fg_color=c(COLOR_BORDER), height=1, corner_radius=0
+            sidebar, fg_color=COLOR_BORDER, height=1, corner_radius=0
         ).grid(row=4, column=0, sticky="ew")
 
-        # -- Home button (footer) --------------------------------------------
+        # -- Footer row: Home + theme toggle --------------------------------
+        footer_row = ctk.CTkFrame(sidebar, fg_color="transparent")
+        footer_row.grid(row=5, column=0, sticky="ew",
+                        padx=SPACE_SM, pady=(SPACE_SM, SPACE_LG))
+        footer_row.columnconfigure(0, weight=1)
+        footer_row.columnconfigure(1, weight=0)
+
         home_btn = ctk.CTkButton(
-            sidebar,
+            footer_row,
             text="  Inicio",
             anchor="w",
             height=36,
             corner_radius=RADIUS_MD,
             fg_color="transparent",
-            hover_color=c(SIDEBAR_HOVER),
-            text_color=c(COLOR_TEXT_MUTED),
+            hover_color=SIDEBAR_HOVER,
+            text_color=COLOR_TEXT_MUTED,
             font=ctk.CTkFont(size=FONT_SM),
             command=lambda: self.show_frame("MenuPrincipal"),
         )
-        home_btn.grid(row=5, column=0, sticky="ew",
-                      padx=SPACE_SM, pady=(SPACE_SM, SPACE_LG))
+        home_btn.grid(row=0, column=0, sticky="ew", padx=(0, 4))
         self._nav_buttons["MenuPrincipal"] = home_btn
+
+        self._theme_btn = ctk.CTkButton(
+            footer_row,
+            text="☾",
+            width=36,
+            height=36,
+            corner_radius=RADIUS_MD,
+            fg_color="transparent",
+            hover_color=SIDEBAR_HOVER,
+            text_color=COLOR_TEXT_MUTED,
+            font=ctk.CTkFont(size=14),
+            command=self._toggle_theme,
+        )
+        self._theme_btn.grid(row=0, column=1)
 
     # ── Content area ─────────────────────────────────────────────────────────
 
     def _build_content(self) -> None:
-        self.container = ctk.CTkFrame(self, fg_color=c(COLOR_BG), corner_radius=0)
+        self.container = ctk.CTkFrame(self, fg_color=COLOR_BG, corner_radius=0)
         self.container.grid(row=0, column=1, sticky="nsew")
         self.container.grid_rowconfigure(0, weight=1)
         self.container.grid_columnconfigure(0, weight=1)
@@ -281,11 +303,17 @@ class AppController(ctk.CTk):
     def _update_nav_highlight(self, active_key: str) -> None:
         for key, btn in self._nav_buttons.items():
             if key == active_key:
-                btn.configure(fg_color=c(SIDEBAR_ACTIVE), text_color=c(COLOR_TEXT))
+                btn.configure(fg_color=SIDEBAR_ACTIVE, text_color=COLOR_TEXT)
             else:
-                btn.configure(fg_color="transparent", text_color=c(COLOR_TEXT_MUTED))
+                btn.configure(fg_color="transparent", text_color=COLOR_TEXT_MUTED)
 
     # ── Window utilities ─────────────────────────────────────────────────────
+
+    def _toggle_theme(self) -> None:
+        self._is_dark = not self._is_dark
+        mode = "dark" if self._is_dark else "light"
+        ctk.set_appearance_mode(mode)
+        self._theme_btn.configure(text="☾" if self._is_dark else "☀")
 
     def _toggle_fullscreen(self) -> None:
         self.is_fullscreen = not self.is_fullscreen
@@ -362,7 +390,7 @@ class MenuPrincipalFrame(ctk.CTkFrame):
             header,
             text="Bem-vindo ao Pytegrator",
             font=ctk.CTkFont(size=FONT_2XL, weight="bold"),
-            text_color=c(COLOR_TEXT),
+            text_color=COLOR_TEXT,
             anchor="w",
         ).pack(anchor="w")
 
@@ -370,13 +398,13 @@ class MenuPrincipalFrame(ctk.CTkFrame):
             header,
             text="Integracao com Mega ERP  -  XML, SOAP e Trace",
             font=ctk.CTkFont(size=FONT_MD),
-            text_color=c(COLOR_TEXT_MUTED),
+            text_color=COLOR_TEXT_MUTED,
             anchor="w",
         ).pack(anchor="w", pady=(4, 0))
 
         # -- Divider ---------------------------------------------------------
         ctk.CTkFrame(
-            self, fg_color=c(COLOR_BORDER), height=1, corner_radius=0
+            self, fg_color=COLOR_BORDER, height=1, corner_radius=0
         ).grid(row=1, column=0, sticky="ew", padx=SPACE_XL)
 
         # -- Cards -----------------------------------------------------------
@@ -392,10 +420,10 @@ class MenuPrincipalFrame(ctk.CTkFrame):
     def _make_card(self, parent: ctk.CTkFrame, col: int, data: dict) -> None:
         card = ctk.CTkFrame(
             parent,
-            fg_color=c(COLOR_SURFACE),
+            fg_color=COLOR_SURFACE,
             corner_radius=RADIUS_LG,
             border_width=1,
-            border_color=c(COLOR_BORDER),
+            border_color=COLOR_BORDER,
             cursor="hand2",
         )
         card.grid(row=0, column=col, sticky="nsew", padx=SPACE_SM)
@@ -405,7 +433,7 @@ class MenuPrincipalFrame(ctk.CTkFrame):
             card,
             text=data["title"],
             font=ctk.CTkFont(size=FONT_MD, weight="bold"),
-            text_color=c(COLOR_TEXT),
+            text_color=COLOR_TEXT,
             anchor="w",
             wraplength=260,
         ).grid(row=0, column=0, sticky="ew",
@@ -415,7 +443,7 @@ class MenuPrincipalFrame(ctk.CTkFrame):
             card,
             text=data["desc"],
             font=ctk.CTkFont(size=FONT_SM),
-            text_color=c(COLOR_TEXT_MUTED),
+            text_color=COLOR_TEXT_MUTED,
             anchor="w",
             justify="left",
             wraplength=260,
@@ -427,8 +455,8 @@ class MenuPrincipalFrame(ctk.CTkFrame):
             text="Abrir",
             height=30,
             corner_radius=RADIUS_MD,
-            fg_color=c(COLOR_ACCENT),
-            hover_color=c(COLOR_ACCENT_HOVER),
+            fg_color=COLOR_ACCENT,
+            hover_color=COLOR_ACCENT_HOVER,
             text_color="white",
             font=ctk.CTkFont(size=FONT_SM, weight="bold"),
             command=lambda k=data["frame"]: self.controller.show_frame(k),
@@ -436,10 +464,10 @@ class MenuPrincipalFrame(ctk.CTkFrame):
                padx=SPACE_LG, pady=(0, SPACE_LG))
 
         def _enter(_e, f=card):
-            f.configure(fg_color=c(COLOR_SURFACE_ALT))
+            f.configure(fg_color=COLOR_SURFACE_ALT)
 
         def _leave(_e, f=card):
-            f.configure(fg_color=c(COLOR_SURFACE))
+            f.configure(fg_color=COLOR_SURFACE)
 
         def _click(_e, k=data["frame"]):
             self.controller.show_frame(k)

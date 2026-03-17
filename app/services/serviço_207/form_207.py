@@ -14,7 +14,21 @@ Melhorias principais:
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
+import customtkinter as ctk
+
+from app.ui.theme import (
+    COLOR_BG,
+    COLOR_SURFACE,
+    COLOR_SURFACE_ALT,
+    COLOR_BORDER,
+    COLOR_TEXT,
+    COLOR_TEXT_MUTED,
+    COLOR_ACCENT,
+    COLOR_ACCENT_HOVER,
+    FONT_SM,
+    FONT_MD,
+)
 
 # ---- Integrações e utilitários do projeto (mantidos como no original) ----
 from app.lib.api.ibgeAPI import buscar_codigo_municipio
@@ -69,7 +83,7 @@ UF_LIST = [
 ]
 
 
-class Gerador207Frame(ttk.Frame):
+class Gerador207Frame(ctk.CTkFrame):
     """
     Frame principal da ferramenta "Gerador de XML - Serviço 207".
     """
@@ -81,7 +95,7 @@ class Gerador207Frame(ttk.Frame):
         """
         Inicializa o frame, variáveis e interface.
         """
-        super().__init__(parent)
+        super().__init__(parent, fg_color=COLOR_BG)
         self.controller = controller
         self._inicializando = True  # evita triggers enquanto monta UI
 
@@ -142,58 +156,28 @@ class Gerador207Frame(ttk.Frame):
         """
         Cria e posiciona todos os widgets do formulário.
         """
-        # Canvas rolável para todo o conteúdo
-        self._canvas = tk.Canvas(self, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self._canvas.yview)
-        scrollable_frame = ttk.Frame(self._canvas)
+        # Área rolável nativa do CustomTkinter (substitui Canvas+Scrollbar manual)
+        scroll = ctk.CTkScrollableFrame(self, fg_color=COLOR_BG)
+        scroll.pack(fill="both", expand=True)
+        container = ctk.CTkFrame(scroll, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=16, pady=16)
 
-        # Atualiza área rolável conforme conteúdo cresce
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self._canvas.configure(scrollregion=self._canvas.bbox("all")),
-        )
-
-        # Insere o frame dentro do canvas
-        frame_id = self._canvas.create_window(
-            (0, 0), window=scrollable_frame, anchor="nw"
-        )
-        self._canvas.configure(yscrollcommand=scrollbar.set)
-
-        # Faz o frame acompanhar a largura do canvas
-        def _sync_width(event):
-            self._canvas.itemconfig(frame_id, width=event.width)
-
-        self._canvas.bind("<Configure>", _sync_width)
-
-        # Rolagem cross-platform
-        self._enable_cross_platform_scroll(self._canvas)
-
-        # Renderização
-        self._canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        # Container principal com padding
-        container = ttk.Frame(scrollable_frame, padding="10")
-        container.pack(fill="both", expand=True)
-
-        # ---- Título da tela ----
-        title_bar = tk.Label(
+        # ---- Título ----
+        ctk.CTkLabel(
             container,
-            text="207 - Agentes",
-            bg="#005a9e",
-            fg="white",
-            font=("Helvetica", 12, "bold"),
-            padx=10,
-            pady=5,
+            text="207 — Agentes",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=COLOR_TEXT,
             anchor="w",
-        )
-        title_bar.pack(fill="x", pady=(0, 10))
+        ).pack(fill="x", pady=(0, 14))
 
         # Linha superior: dois grupos de rádio (natureza e tipo de pessoa)
-        top_radios_frame = ttk.Frame(container)
-        top_radios_frame.pack(fill="x", expand=True, pady=5)
+        top_radios_frame = ctk.CTkFrame(container, fg_color="transparent")
+        top_radios_frame.pack(fill="x", pady=6)
+        top_radios_frame.columnconfigure(0, weight=1)
+        top_radios_frame.columnconfigure(1, weight=1)
 
-        # Grupo: Tipo de Natureza (Pessoa/Empresa)
+        # Grupo: Tipo de Natureza
         f1_data = self._criar_grupo_radio(
             top_radios_frame,
             "Tipo de Natureza",
@@ -202,9 +186,9 @@ class Gerador207Frame(ttk.Frame):
             return_widgets=True,
         )
         self.f1_frame = f1_data["frame"]
-        self.f1_frame.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        self.f1_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
-        # Grupo: Tipo de Pessoa (F/J/R)
+        # Grupo: Tipo de Pessoa
         tipo_pessoa_data = self._criar_grupo_radio(
             top_radios_frame,
             "Tipo de Pessoa",
@@ -214,9 +198,9 @@ class Gerador207Frame(ttk.Frame):
         )
         self.tipo_pessoa_frame = tipo_pessoa_data["frame"]
         self.tipo_pessoa_radios = tipo_pessoa_data["widgets"]
-        self.tipo_pessoa_frame.pack(side="left", fill="x", expand=True, padx=(5, 0))
+        self.tipo_pessoa_frame.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
 
-        # Grupo condicional: opções do produtor rural (só aparece quando tipo=R)
+        # Grupo condicional: produtor rural (só aparece quando tipo=R)
         rural_container_data = self._criar_grupo_radio(
             container,
             "Opções para Produtor Rural",
@@ -227,27 +211,39 @@ class Gerador207Frame(ttk.Frame):
         self.rural_container = rural_container_data["frame"]
 
         # ---- Grupo: Nome e Fantasia ----
-        nome_frame = ttk.LabelFrame(container, text="Nome e Fantasia", padding="10")
-        nome_frame.pack(fill="x", pady=10, anchor="n")
-        nome_frame.columnconfigure(1, weight=1)
+        nome_outer, nome_inner = self._make_group(container, "Nome e Fantasia")
+        nome_outer.pack(fill="x", pady=6)
+        self._nome_group = nome_outer  # referência para pack(before=...)
+        nome_inner.columnconfigure(1, weight=1)
 
-        ttk.Label(nome_frame, text="Nome do Agente:").grid(
-            row=0, column=0, sticky="w", padx=5, pady=2
+        ctk.CTkLabel(
+            nome_inner, text="Nome do Agente:", font=ctk.CTkFont(size=FONT_SM),
+            text_color=COLOR_TEXT_MUTED, anchor="w",
+        ).grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+        self.nome_entry = ctk.CTkEntry(
+            nome_inner, fg_color=COLOR_SURFACE_ALT,
+            border_color=COLOR_BORDER, text_color=COLOR_TEXT,
         )
-        self.nome_entry = ttk.Entry(nome_frame, width=40)
-        self.nome_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
+        self.nome_entry.grid(row=0, column=1, sticky="ew", padx=(0, 8), pady=4)
 
-        ttk.Label(nome_frame, text="Nome Fantasia:").grid(
-            row=1, column=0, sticky="w", padx=5, pady=2
+        ctk.CTkLabel(
+            nome_inner, text="Nome Fantasia:", font=ctk.CTkFont(size=FONT_SM),
+            text_color=COLOR_TEXT_MUTED, anchor="w",
+        ).grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+        self.fantasia_entry = ctk.CTkEntry(
+            nome_inner, fg_color=COLOR_SURFACE_ALT,
+            border_color=COLOR_BORDER, text_color=COLOR_TEXT,
         )
-        self.fantasia_entry = ttk.Entry(nome_frame, width=40)
-        self.fantasia_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+        self.fantasia_entry.grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=4)
 
-        # Botão para gerar Nome/Fantasia automaticamente
-        self.btn_gerar_fantasia = ttk.Button(nome_frame, text="Gerar Nome e Fantasia")
-        self.btn_gerar_fantasia.grid(row=0, column=2, rowspan=2, sticky="ns", padx=10)
+        self.btn_gerar_fantasia = ctk.CTkButton(
+            nome_inner, text="Gerar Nome e Fantasia",
+            fg_color=COLOR_ACCENT, hover_color=COLOR_ACCENT_HOVER,
+            font=ctk.CTkFont(size=FONT_SM), corner_radius=6,
+        )
+        self.btn_gerar_fantasia.grid(row=0, column=2, rowspan=2, sticky="ns", padx=(8, 0))
 
-        # ---- Grupo: Inscrições (Estadual/Municipal/Isento) ----
+        # ---- Grupo: Inscrições ----
         self.insc_checks = self._criar_grupo_check(
             container,
             "Será gerado Inscrição?",
@@ -257,43 +253,46 @@ class Gerador207Frame(ttk.Frame):
                 ("ISENTO", "checkboxIsento"),
             ],
         )
-        self.insc_checks["frame"].pack(fill="x", pady=5, anchor="n")
+        self.insc_checks["frame"].pack(fill="x", pady=6)
 
-        # ---- Grupo: Localização (UF + Município) ----
-        local_frame = ttk.LabelFrame(container, text="Localização", padding="10")
-        local_frame.pack(fill="x", pady=10, anchor="n")
-        local_frame.columnconfigure(3, weight=1)
+        # ---- Grupo: Localização ----
+        local_outer, local_inner = self._make_group(container, "Localização")
+        local_outer.pack(fill="x", pady=6)
+        local_inner.columnconfigure(3, weight=1)
 
-        ttk.Label(local_frame, text="Estado (UF):").grid(
-            row=0, column=0, sticky="w", padx=5
+        ctk.CTkLabel(
+            local_inner, text="Estado (UF):", font=ctk.CTkFont(size=FONT_SM),
+            text_color=COLOR_TEXT_MUTED,
+        ).grid(row=0, column=0, sticky="w", padx=(0, 4))
+        self.estado_combo = ctk.CTkComboBox(
+            local_inner, values=UF_LIST, state="readonly", width=80,
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER,
+            text_color=COLOR_TEXT, dropdown_fg_color=COLOR_SURFACE,
+            button_color=COLOR_BORDER, button_hover_color=COLOR_ACCENT,
         )
-        self.estado_combo = ttk.Combobox(
-            local_frame, values=UF_LIST, state="readonly", width=5
-        )
-        self.estado_combo.grid(row=0, column=1, sticky="w", padx=5)
+        self.estado_combo.grid(row=0, column=1, sticky="w", padx=(0, 12))
 
-        ttk.Label(local_frame, text="Município:").grid(
-            row=0, column=2, sticky="w", padx=10
+        ctk.CTkLabel(
+            local_inner, text="Município:", font=ctk.CTkFont(size=FONT_SM),
+            text_color=COLOR_TEXT_MUTED,
+        ).grid(row=0, column=2, sticky="w", padx=(0, 4))
+        self.municipio_entry = ctk.CTkEntry(
+            local_inner, fg_color=COLOR_SURFACE_ALT,
+            border_color=COLOR_BORDER, text_color=COLOR_TEXT,
         )
-        self.municipio_entry = ttk.Entry(local_frame)
-        self.municipio_entry.grid(row=0, column=3, sticky="ew", padx=5)
+        self.municipio_entry.grid(row=0, column=3, sticky="ew")
 
-        # ---- Grupo: Tipo do Agente (vários checkboxes) ----
+        # ---- Grupo: Tipo do Agente ----
         tipos_agente = [
-            ("Cliente", "cliente"),
-            ("Fornecedor", "fornecedor"),
-            ("Representante", "representante"),
-            ("Contato", "contato"),
-            ("Transportadora", "transportadora"),
-            ("Obrigação", "obrigacao"),
-            ("Colaborador", "colaborador"),
-            ("Outros", "outros"),
-            ("Obra", "obra"),
-            ("Sindicato", "sindicato"),
+            ("Cliente", "cliente"), ("Fornecedor", "fornecedor"),
+            ("Representante", "representante"), ("Contato", "contato"),
+            ("Transportadora", "transportadora"), ("Obrigação", "obrigacao"),
+            ("Colaborador", "colaborador"), ("Outros", "outros"),
+            ("Obra", "obra"), ("Sindicato", "sindicato"),
         ]
         self._criar_grupo_check(
-            container, "Tipo do Agente", tipos_agente, self.tipo_agente_vars, columns=4
-        )["frame"].pack(fill="x", pady=5, anchor="n")
+            container, "Tipo do Agente", tipos_agente, self.tipo_agente_vars, columns=4,
+        )["frame"].pack(fill="x", pady=6)
 
         # ---- Grupo: Configurações Fiscais ----
         configs_fiscais = [
@@ -317,76 +316,126 @@ class Gerador207Frame(ttk.Frame):
             ("Enquadra INSS Rural", "enquadraINSSRURAL"),
         ]
         self._criar_grupo_check(
-            container, "Configurações Fiscais", configs_fiscais, columns=4
-        )["frame"].pack(fill="x", pady=5, anchor="n")
+            container, "Configurações Fiscais", configs_fiscais, columns=4,
+        )["frame"].pack(fill="x", pady=6)
 
         # ---- Campo: Filial ----
-        filial_frame = ttk.Frame(container, padding="10")
-        filial_frame.pack(fill="x", pady=10, anchor="n")
-        ttk.Label(filial_frame, text="Código da Filial (FIL_IN_CODIGO):").pack(
-            side="left"
+        filial_outer, filial_inner = self._make_group(container, "")
+        filial_outer.pack(fill="x", pady=6)
+        ctk.CTkLabel(
+            filial_inner, text="Código da Filial (FIL_IN_CODIGO):",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED,
+        ).pack(side="left")
+        self.filial_entry = ctk.CTkEntry(
+            filial_inner, width=120, fg_color=COLOR_SURFACE_ALT,
+            border_color=COLOR_BORDER, text_color=COLOR_TEXT,
         )
-        self.filial_entry = ttk.Entry(filial_frame, width=15)
-        self.filial_entry.pack(side="left", padx=5)
+        self.filial_entry.pack(side="left", padx=8)
 
-        # ---- Ações (apenas Gerar XML) ----
-        action_frame = ttk.Frame(container, padding="10")
-        action_frame.pack(fill="x", anchor="n")
-        action_frame.columnconfigure(0, weight=1)
-        action_frame.columnconfigure(1, weight=0)
-
-        self.btn_gerar_xml = ttk.Button(action_frame, text="Gerar XML")
-        self.btn_gerar_xml.grid(row=0, column=1, sticky="e")
+        # ---- Ações ----
+        action_frame = ctk.CTkFrame(container, fg_color="transparent")
+        action_frame.pack(fill="x", pady=14)
+        self.btn_gerar_xml = ctk.CTkButton(
+            action_frame, text="Gerar XML",
+            fg_color=COLOR_ACCENT, hover_color=COLOR_ACCENT_HOVER,
+            font=ctk.CTkFont(size=FONT_MD), corner_radius=6, width=140,
+        )
+        self.btn_gerar_xml.pack(side="right")
 
     # --------------------------------------------------------------------- #
-    # Widgets auxiliares (grupos de controles)
+    # Helpers de layout
     # --------------------------------------------------------------------- #
+    def _make_group(self, parent, text: str) -> tuple:
+        """
+        Cria um card (frame com borda) com título e retorna (outer, inner).
+        """
+        outer = ctk.CTkFrame(
+            parent, fg_color=COLOR_SURFACE,
+            corner_radius=8, border_width=1, border_color=COLOR_BORDER,
+        )
+        if text:
+            ctk.CTkLabel(
+                outer, text=text, font=ctk.CTkFont(size=FONT_SM),
+                text_color=COLOR_TEXT_MUTED, anchor="w",
+            ).pack(anchor="w", padx=12, pady=(8, 4))
+        inner = ctk.CTkFrame(outer, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=10, pady=(4, 10))
+        return outer, inner
+
     def _criar_grupo_radio(
         self,
-        parent: tk.Widget,
+        parent,
         text: str,
         options: list[tuple[str, str]],
         variable: tk.StringVar,
         return_widgets: bool = False,
     ) -> dict:
         """
-        Cria um LabelFrame com diversos Radiobuttons.
+        Cria um card com radiobuttons estilizados no design system.
         """
-        frame = ttk.LabelFrame(parent, text=text, padding="10")
-        widgets: list[ttk.Radiobutton] = []
+        outer = ctk.CTkFrame(
+            parent, fg_color=COLOR_SURFACE,
+            corner_radius=8, border_width=1, border_color=COLOR_BORDER,
+        )
+        ctk.CTkLabel(
+            outer, text=text, font=ctk.CTkFont(size=FONT_SM),
+            text_color=COLOR_TEXT_MUTED, anchor="w",
+        ).pack(anchor="w", padx=12, pady=(8, 4))
+        inner = ctk.CTkFrame(outer, fg_color="transparent")
+        inner.pack(fill="x", padx=8, pady=(0, 8))
 
+        widgets: list[ctk.CTkRadioButton] = []
         for label, value in options:
-            rb = ttk.Radiobutton(frame, text=label, variable=variable, value=value)
-            rb.pack(side="left", expand=True, padx=5)
+            rb = ctk.CTkRadioButton(
+                inner, text=label, variable=variable, value=value,
+                font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT,
+                fg_color=COLOR_ACCENT, hover_color=COLOR_ACCENT_HOVER,
+                border_color=COLOR_BORDER,
+            )
+            rb.pack(side="left", padx=8, pady=4)
             widgets.append(rb)
 
         if return_widgets:
-            return {"frame": frame, "widgets": widgets}
-        return {"frame": frame, "widgets": []}
+            return {"frame": outer, "widgets": widgets}
+        return {"frame": outer, "widgets": []}
 
     def _criar_grupo_check(
         self,
-        parent: tk.Widget,
+        parent,
         text: str,
         options: list[tuple[str, str]],
         var_dict: dict[str, tk.BooleanVar] | None = None,
         columns: int = 3,
     ) -> dict:
         """
-        Cria um LabelFrame com diversos Checkbuttons dispostos em grade.
+        Cria um card com checkboxes em grade, estilizados no design system.
         """
         if var_dict is None:
             var_dict = self.check_vars
 
-        frame = ttk.LabelFrame(parent, text=text, padding="10")
-        widgets: dict[str, ttk.Checkbutton] = {}
+        outer = ctk.CTkFrame(
+            parent, fg_color=COLOR_SURFACE,
+            corner_radius=8, border_width=1, border_color=COLOR_BORDER,
+        )
+        ctk.CTkLabel(
+            outer, text=text, font=ctk.CTkFont(size=FONT_SM),
+            text_color=COLOR_TEXT_MUTED, anchor="w",
+        ).pack(anchor="w", padx=12, pady=(8, 4))
+        inner = ctk.CTkFrame(outer, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
+        widgets: dict[str, ctk.CTkCheckBox] = {}
         for i, (label, key) in enumerate(options):
-            cb = ttk.Checkbutton(frame, text=label, variable=var_dict[key])
-            cb.grid(row=i // columns, column=i % columns, sticky="w", padx=5, pady=2)
+            cb = ctk.CTkCheckBox(
+                inner, text=label, variable=var_dict[key],
+                font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT,
+                fg_color=COLOR_ACCENT, hover_color=COLOR_ACCENT_HOVER,
+                border_color=COLOR_BORDER,
+            )
+            cb.grid(row=i // columns, column=i % columns, sticky="w", padx=8, pady=3)
             widgets[key] = cb
 
-        return {"frame": frame, "widgets": widgets}
+        return {"frame": outer, "widgets": widgets}
 
     # --------------------------------------------------------------------- #
     # Conexão de eventos / valores padrão
@@ -395,9 +444,8 @@ class Gerador207Frame(ttk.Frame):
         """
         Conecta os handlers de eventos aos widgets criados.
         """
-        # Botões
-        self.btn_gerar_fantasia.config(command=self.on_gerar_nome_fantasia)
-        self.btn_gerar_xml.config(command=self.on_gerar_xml)
+        self.btn_gerar_fantasia.configure(command=self.on_gerar_nome_fantasia)
+        self.btn_gerar_xml.configure(command=self.on_gerar_xml)
 
         # Triggers reativos
         self.tipo_nome_var.trace_variable("w", self._atualizar_tipo_pessoa_ui)
@@ -434,14 +482,14 @@ class Gerador207Frame(ttk.Frame):
         if self.tipo_nome_var.get() == "empresa":
             for radio in self.tipo_pessoa_radios:
                 if radio.cget("value") == "J":
-                    radio.config(state="normal")
+                    radio.configure(state="normal")
                     self.tipo_pessoa_var.set("J")
                 else:
-                    radio.config(state="disabled")
+                    radio.configure(state="disabled")
             self.rural_container.pack_forget()
         else:
             for radio in self.tipo_pessoa_radios:
-                radio.config(state="normal")
+                radio.configure(state="normal")
             self._atualizar_tipo_rural_ui()
 
     def _atualizar_tipo_rural_ui(self, *_):
@@ -452,9 +500,8 @@ class Gerador207Frame(ttk.Frame):
             return
 
         if self.tipo_nome_var.get() == "pessoa" and self.tipo_pessoa_var.get() == "R":
-            # Insere o bloco rural antes de "Nome e Fantasia"
             self.rural_container.pack(
-                fill="x", pady=5, anchor="n", before=self.nome_entry.master
+                fill="x", pady=6, anchor="n", before=self._nome_group
             )
         else:
             self.rural_container.pack_forget()
@@ -470,8 +517,8 @@ class Gerador207Frame(ttk.Frame):
         est_check = self.insc_checks["widgets"]["checkboxInscricaoEstadual"]
         mun_check = self.insc_checks["widgets"]["checkboxInscricaoMunicipal"]
 
-        est_check.config(state="disabled" if is_isento else "normal")
-        mun_check.config(state="disabled" if is_isento else "normal")
+        est_check.configure(state="disabled" if is_isento else "normal")
+        mun_check.configure(state="disabled" if is_isento else "normal")
 
         if is_isento:
             self.check_vars["checkboxInscricaoEstadual"].set(False)
@@ -488,7 +535,7 @@ class Gerador207Frame(ttk.Frame):
             "checkboxInscricaoMunicipal"
         )
         isento_check = self.insc_checks["widgets"]["checkboxIsento"]
-        isento_check.config(state="disabled" if has_any else "normal")
+        isento_check.configure(state="disabled" if has_any else "normal")
 
     # --------------------------------------------------------------------- #
     # Ações principais
@@ -781,35 +828,7 @@ class Gerador207Frame(ttk.Frame):
         """
         state = "normal" if enabled else "disabled"
         try:
-            self.btn_gerar_xml.config(state=state)
-            self.btn_gerar_fantasia.config(state=state)
+            self.btn_gerar_xml.configure(state=state)
+            self.btn_gerar_fantasia.configure(state=state)
         except Exception:
             pass
-
-    def _enable_cross_platform_scroll(self, canvas: tk.Canvas) -> None:
-        """
-        Habilita rolagem com:
-        - Windows/macOS: <MouseWheel>
-        - Linux/X11: <Button-4>/<Button-5>
-        """
-
-        def _on_mousewheel(event):
-            # Em Windows, delta=±120, em macOS pode ser menor.
-            step = -1 if event.delta > 0 else 1
-            canvas.yview_scroll(step, "units")
-
-        def _on_button4(_):  # scroll up em X11
-            canvas.yview_scroll(-1, "units")
-
-        def _on_button5(_):  # scroll down em X11
-            canvas.yview_scroll(1, "units")
-
-        # Ao entrar/sair do canvas, liga/desliga o binding global do wheel
-        canvas.bind(
-            "<Enter>", lambda _e: canvas.bind_all("<MouseWheel>", _on_mousewheel)
-        )
-        canvas.bind("<Leave>", lambda _e: canvas.unbind_all("<MouseWheel>"))
-
-        # Suporte Linux
-        canvas.bind("<Button-4>", _on_button4)
-        canvas.bind("<Button-5>", _on_button5)

@@ -52,7 +52,7 @@ class Card(ctk.CTkFrame):
             fg_color=COLOR_SURFACE,
             corner_radius=RADIUS_LG,
             border_width=1,
-            border_color=c(COLOR_BORDER),
+            border_color=COLOR_BORDER,
         )
         defaults.update(kwargs)
         super().__init__(parent, **defaults)
@@ -82,7 +82,7 @@ class LabeledEntry(ctk.CTkFrame):
             self,
             text=label,
             font=ctk.CTkFont(size=FONT_SM),
-            text_color=c(COLOR_TEXT_MUTED),
+            text_color=COLOR_TEXT_MUTED,
             anchor="w",
         ).grid(row=0, column=0, sticky="w", pady=(0, 4))
 
@@ -128,7 +128,7 @@ class SectionHeader(ctk.CTkFrame):
             self,
             text=title,
             font=ctk.CTkFont(size=FONT_XL, weight="bold"),
-            text_color=c(COLOR_TEXT),
+            text_color=COLOR_TEXT,
             anchor="w",
         ).grid(row=0, column=0, sticky="w")
 
@@ -137,7 +137,7 @@ class SectionHeader(ctk.CTkFrame):
                 self,
                 text=subtitle,
                 font=ctk.CTkFont(size=FONT_SM),
-                text_color=c(COLOR_TEXT_MUTED),
+                text_color=COLOR_TEXT_MUTED,
                 anchor="w",
             ).grid(row=1, column=0, sticky="w", pady=(2, 0))
 
@@ -166,8 +166,8 @@ def primary_button(
     defaults: dict = dict(
         height=34,
         corner_radius=RADIUS_MD,
-        fg_color=c(COLOR_ACCENT),
-        hover_color=c(COLOR_ACCENT_HOVER),
+        fg_color=COLOR_ACCENT,
+        hover_color=COLOR_ACCENT_HOVER,
         text_color="white",
         font=ctk.CTkFont(size=FONT_SM, weight="bold"),
     )
@@ -193,14 +193,14 @@ class StatusBadge(ctk.CTkLabel):
     """
 
     _PALETTE: dict[str, tuple[str, str]] = {
-        "ok":      (c(COLOR_SUCCESS), "black"),
-        "error":   (c(COLOR_ERROR),   "white"),
-        "warning": (c(COLOR_WARNING), "black"),
-        "info":    (c(COLOR_ACCENT),  "white"),
+        "ok":      (COLOR_SUCCESS, "black"),
+        "error":   (COLOR_ERROR,   "white"),
+        "warning": (COLOR_WARNING, "black"),
+        "info":    (COLOR_ACCENT,  "white"),
     }
 
     def __init__(self, parent, status: str = "info", text: str = "", **kwargs):
-        bg, fg = self._PALETTE.get(status.lower(), (c(COLOR_ACCENT), "white"))
+        bg, fg = self._PALETTE.get(status.lower(), (COLOR_ACCENT, "white"))
         super().__init__(
             parent,
             text=text or status.upper(),
@@ -227,7 +227,7 @@ class Divider(ctk.CTkFrame):
     def __init__(self, parent, **kwargs):
         super().__init__(
             parent,
-            fg_color=c(COLOR_BORDER),
+            fg_color=COLOR_BORDER,
             height=1,
             corner_radius=0,
             **kwargs,
@@ -297,8 +297,8 @@ class NavItem(ctk.CTkButton):
             height=34,
             corner_radius=RADIUS_MD,
             fg_color="transparent",
-            hover_color=c(SIDEBAR_HOVER),
-            text_color=c(COLOR_TEXT_MUTED),
+            hover_color=SIDEBAR_HOVER,
+            text_color=COLOR_TEXT_MUTED,
             font=ctk.CTkFont(size=FONT_SM),
             command=command,
             **kwargs,
@@ -310,6 +310,6 @@ class NavItem(ctk.CTkButton):
 
         self._active = active
         if active:
-            self.configure(fg_color=c(SIDEBAR_ACTIVE), text_color=c(COLOR_TEXT))
+            self.configure(fg_color=SIDEBAR_ACTIVE, text_color=COLOR_TEXT)
         else:
-            self.configure(fg_color="transparent", text_color=c(COLOR_TEXT_MUTED))
+            self.configure(fg_color="transparent", text_color=COLOR_TEXT_MUTED)

@@ -1,7 +1,9 @@
 # app/services/soap/form_ferramentasoap.py
+# -*- coding: utf-8 -*-
 
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
+from tkinter import messagebox
+import customtkinter as ctk
 import threading
 import time
 import requests
@@ -10,8 +12,15 @@ from html import escape
 from xml.dom import minidom
 import xml.parsers.expat
 
+from app.ui.theme import (
+    COLOR_BG, COLOR_SURFACE, COLOR_SURFACE_ALT, COLOR_HOVER,
+    COLOR_BORDER, COLOR_TEXT, COLOR_TEXT_MUTED,
+    COLOR_ACCENT, COLOR_ACCENT_HOVER,
+    FONT_SM, FONT_MD,
+)
 
-class FerramentaSOAPFrame(ttk.Frame):
+
+class FerramentaSOAPFrame(ctk.CTkFrame):
     """
     Frame da ferramenta de envio de requisições SOAP em lote.
     Responsabilidades:
@@ -29,7 +38,7 @@ class FerramentaSOAPFrame(ttk.Frame):
             parent: widget pai onde o frame será acoplado.
             controller: controlador principal (janela/root) para navegar/compartilhar dados (mantido por compatibilidade).
         """
-        super().__init__(parent)
+        super().__init__(parent, fg_color=COLOR_BG)
         self.controller = controller
         # Evento usado para sinalizar interrupção segura do processo em thread
         self.deve_interromper = threading.Event()
@@ -38,193 +47,242 @@ class FerramentaSOAPFrame(ttk.Frame):
 
     def _criar_widgets(self):
         """
-        Cria e organiza todos os widgets da interface gráfica (labels, entries, botões, áreas de texto).
-        Observações:
-          - Mantém o layout original.
-          - Removeu-se o botão "Voltar ao Menu" conforme solicitado.
+        Cria e organiza todos os widgets da interface gráfica.
         """
-        main_frame = ttk.Frame(self, padding="10")
-        main_frame.pack(fill="both", expand=True)
-        main_frame.rowconfigure(3, weight=1)
-        main_frame.columnconfigure(0, weight=1)
+        # Layout: 6 linhas, coluna única
+        self.grid_rowconfigure(3, weight=1)  # payload expande
+        self.grid_rowconfigure(4, weight=2)  # logs expande mais
+        self.grid_columnconfigure(0, weight=1)
 
-        # --- Barra de Título ---
-        title_bar = tk.Label(
-            main_frame,
+        # ---- Título ----
+        ctk.CTkLabel(
+            self,
             text="Ferramenta de Integração SOAP",
-            bg="#005a9e",
-            fg="white",
-            font=("Helvetica", 12, "bold"),
-            padx=10,
-            pady=5,
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=COLOR_TEXT,
             anchor="w",
-        )
-        title_bar.grid(row=0, column=0, sticky="ew", pady=(0, 5))
+        ).grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 0))
 
-        # --- Configuração e Parâmetros ---
-        config_frame = ttk.LabelFrame(
-            main_frame, text="Configuração do Envio", padding="10"
+        # ---- Configuração do Envio ----
+        config_outer = ctk.CTkFrame(
+            self, fg_color=COLOR_SURFACE, corner_radius=8,
+            border_width=1, border_color=COLOR_BORDER,
         )
-        config_frame.grid(row=1, column=0, sticky="ew", pady=5)
+        config_outer.grid(row=1, column=0, sticky="ew", padx=16, pady=(12, 0))
+        ctk.CTkLabel(
+            config_outer, text="Configuração do Envio",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED, anchor="w",
+        ).pack(anchor="w", padx=12, pady=(8, 4))
+        config_frame = ctk.CTkFrame(config_outer, fg_color="transparent")
+        config_frame.pack(fill="x", padx=10, pady=(0, 10))
+        config_frame.columnconfigure(1, weight=1)
         config_frame.columnconfigure(4, weight=1)
 
-        ttk.Label(config_frame, text="Computador/URL Integrador:").grid(
-            row=0, column=0, sticky="w", padx=5, pady=5
+        ctk.CTkLabel(
+            config_frame, text="Computador/URL Integrador:",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED,
+        ).grid(row=0, column=0, sticky="w", padx=(0, 6), pady=4)
+        self.url_base_entry = ctk.CTkEntry(
+            config_frame, width=260,
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, text_color=COLOR_TEXT,
         )
-        self.url_base_entry = ttk.Entry(config_frame, width=40)
         self.url_base_entry.insert(0, "localhost")
-        self.url_base_entry.grid(row=0, column=1, sticky="w", padx=5)
+        self.url_base_entry.grid(row=0, column=1, sticky="w", padx=(0, 12), pady=4)
 
-        ttk.Label(config_frame, text="Porta Integrador:").grid(
-            row=0, column=2, sticky="w", padx=(10, 5), pady=5
+        ctk.CTkLabel(
+            config_frame, text="Porta Integrador:",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED,
+        ).grid(row=0, column=2, sticky="w", padx=(0, 6), pady=4)
+        self.port_entry = ctk.CTkEntry(
+            config_frame, width=80,
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, text_color=COLOR_TEXT,
         )
-        self.port_entry = ttk.Entry(config_frame, width=10)
         self.port_entry.insert(0, "8110")
-        self.port_entry.grid(row=0, column=3, sticky="w", padx=5)
+        self.port_entry.grid(row=0, column=3, sticky="w", padx=(0, 12), pady=4)
 
-        ttk.Label(config_frame, text="Número de Envios:").grid(
-            row=1, column=0, sticky="w", padx=5, pady=5
+        ctk.CTkLabel(
+            config_frame, text="Número de Envios:",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED,
+        ).grid(row=1, column=0, sticky="w", padx=(0, 6), pady=4)
+        self.repetitions_entry = ctk.CTkEntry(
+            config_frame, width=80,
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, text_color=COLOR_TEXT,
         )
-        self.repetitions_entry = ttk.Entry(config_frame, width=10)
         self.repetitions_entry.insert(0, "1")
-        self.repetitions_entry.grid(row=1, column=1, sticky="w", padx=5)
+        self.repetitions_entry.grid(row=1, column=1, sticky="w", pady=4)
 
-        params_frame = ttk.LabelFrame(
-            main_frame, text="Parâmetros da Requisição", padding="10"
+        # ---- Parâmetros da Requisição ----
+        params_outer = ctk.CTkFrame(
+            self, fg_color=COLOR_SURFACE, corner_radius=8,
+            border_width=1, border_color=COLOR_BORDER,
         )
-        params_frame.grid(row=2, column=0, sticky="ew", pady=5)
+        params_outer.grid(row=2, column=0, sticky="ew", padx=16, pady=(10, 0))
+        ctk.CTkLabel(
+            params_outer, text="Parâmetros da Requisição",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED, anchor="w",
+        ).pack(anchor="w", padx=12, pady=(8, 4))
+        params_frame = ctk.CTkFrame(params_outer, fg_color="transparent")
+        params_frame.pack(fill="x", padx=10, pady=(0, 10))
+        params_frame.columnconfigure(4, weight=1)
 
         # Validadores (callbacks de Tk) para limitar tamanho/entrada
-        vcmd_num_4 = (self.register(self._validate_numeric_input), "%P", "4")
-        vcmd_num_6 = (self.register(self._validate_numeric_input), "%P", "6")
-        vcmd_num_3 = (self.register(self._validate_numeric_input), "%P", "3")
-        vcmd_char_50 = (self.register(self._validate_char_input), "%P", "50")
+        vcmd_num_4  = (self.register(self._validate_numeric_input), "%P", "4")
+        vcmd_num_6  = (self.register(self._validate_numeric_input), "%P", "6")
+        vcmd_num_3  = (self.register(self._validate_numeric_input), "%P", "3")
+        vcmd_char_50 = (self.register(self._validate_char_input),   "%P", "50")
 
-        ttk.Label(params_frame, text="Cód. Serviço:").grid(
-            row=0, column=0, sticky="w", padx=5, pady=5
-        )
-        self.pro_id_entry = ttk.Entry(
-            params_frame, width=10, validate="key", validatecommand=vcmd_num_4
+        ctk.CTkLabel(
+            params_frame, text="Cód. Serviço:",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED,
+        ).grid(row=0, column=0, sticky="w", padx=(0, 6), pady=4)
+        self.pro_id_entry = ctk.CTkEntry(
+            params_frame, width=80,
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, text_color=COLOR_TEXT,
+            validate="key", validatecommand=vcmd_num_4,
         )
         self.pro_id_entry.insert(0, "0000")
-        self.pro_id_entry.grid(row=0, column=1, sticky="w", padx=5)
+        self.pro_id_entry.grid(row=0, column=1, sticky="w", padx=(0, 16), pady=4)
 
-        ttk.Label(params_frame, text="Cód. Usuário:").grid(
-            row=0, column=2, sticky="w", padx=(20, 5), pady=5
-        )
-        self.usu_codigo_entry = ttk.Entry(
-            params_frame, width=10, validate="key", validatecommand=vcmd_num_4
+        ctk.CTkLabel(
+            params_frame, text="Cód. Usuário:",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED,
+        ).grid(row=0, column=2, sticky="w", padx=(0, 6), pady=4)
+        self.usu_codigo_entry = ctk.CTkEntry(
+            params_frame, width=80,
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, text_color=COLOR_TEXT,
+            validate="key", validatecommand=vcmd_num_4,
         )
         self.usu_codigo_entry.insert(0, "0001")
-        self.usu_codigo_entry.grid(row=0, column=3, sticky="w", padx=5)
+        self.usu_codigo_entry.grid(row=0, column=3, sticky="w", pady=4)
 
-        ttk.Label(params_frame, text="Cód. Transação:").grid(
-            row=1, column=0, sticky="w", padx=5, pady=5
-        )
-        self.transacao_entry = ttk.Entry(
-            params_frame, width=10, validate="key", validatecommand=vcmd_num_6
+        ctk.CTkLabel(
+            params_frame, text="Cód. Transação:",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED,
+        ).grid(row=1, column=0, sticky="w", padx=(0, 6), pady=4)
+        self.transacao_entry = ctk.CTkEntry(
+            params_frame, width=80,
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, text_color=COLOR_TEXT,
+            validate="key", validatecommand=vcmd_num_6,
         )
         self.transacao_entry.insert(0, "0")
-        self.transacao_entry.grid(row=1, column=1, sticky="w", padx=5)
+        self.transacao_entry.grid(row=1, column=1, sticky="w", padx=(0, 16), pady=4)
 
-        ttk.Label(params_frame, text="Cód. Sistema:").grid(
-            row=1, column=2, sticky="w", padx=(20, 5), pady=5
-        )
-        self.sistema_entry = ttk.Entry(
-            params_frame, width=10, validate="key", validatecommand=vcmd_num_3
+        ctk.CTkLabel(
+            params_frame, text="Cód. Sistema:",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED,
+        ).grid(row=1, column=2, sticky="w", padx=(0, 6), pady=4)
+        self.sistema_entry = ctk.CTkEntry(
+            params_frame, width=80,
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, text_color=COLOR_TEXT,
+            validate="key", validatecommand=vcmd_num_3,
         )
         self.sistema_entry.insert(0, "001")
-        self.sistema_entry.grid(row=1, column=3, sticky="w", padx=5)
+        self.sistema_entry.grid(row=1, column=3, sticky="w", pady=4)
 
-        ttk.Label(params_frame, text="Obs:").grid(
-            row=2, column=0, sticky="w", padx=5, pady=5
+        ctk.CTkLabel(
+            params_frame, text="Obs:",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED,
+        ).grid(row=2, column=0, sticky="w", padx=(0, 6), pady=4)
+        self.obs_entry = ctk.CTkEntry(
+            params_frame,
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, text_color=COLOR_TEXT,
+            validate="key", validatecommand=vcmd_char_50,
         )
-        self.obs_entry = ttk.Entry(
-            params_frame, validate="key", validatecommand=vcmd_char_50
+        self.obs_entry.grid(row=2, column=1, columnspan=3, sticky="ew", pady=4)
+
+        # ---- XML Envio ----
+        payload_outer = ctk.CTkFrame(
+            self, fg_color=COLOR_SURFACE, corner_radius=8,
+            border_width=1, border_color=COLOR_BORDER,
         )
-        self.obs_entry.grid(row=2, column=1, columnspan=3, sticky="ew", padx=5)
-        params_frame.columnconfigure(3, weight=1)
-
-        # Paned vertical com editor de payload e logs
-        paned_window = ttk.PanedWindow(main_frame, orient=tk.VERTICAL)
-        paned_window.grid(row=3, column=0, sticky="nsew", pady=5)
-
-        # --- XML Envio ---
-        payload_frame = ttk.LabelFrame(paned_window, text="XML Envio", padding="10")
-        payload_frame.rowconfigure(0, weight=1)
-        payload_frame.columnconfigure(0, weight=1)
-        paned_window.add(payload_frame, weight=2)
-
-        self.payload_text = scrolledtext.ScrolledText(
-            payload_frame, height=8, font=("Consolas", 10), wrap=tk.WORD
+        payload_outer.grid(row=3, column=0, sticky="nsew", padx=16, pady=(10, 0))
+        payload_outer.grid_rowconfigure(1, weight=1)
+        payload_outer.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            payload_outer, text="XML Envio",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED, anchor="w",
+        ).grid(row=0, column=0, sticky="w", padx=12, pady=(8, 4))
+        self.payload_text = ctk.CTkTextbox(
+            payload_outer,
+            font=ctk.CTkFont(family="Consolas", size=10),
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, border_width=1,
+            text_color=COLOR_TEXT, wrap="word",
         )
-        self.payload_text.grid(row=0, column=0, sticky="nsew")
+        self.payload_text.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
 
-        # --- Progresso e Logs ---
-        log_frame_text = "Progresso e Logs ( arraste a barra acima para redimensionar )"
-        log_frame = ttk.LabelFrame(paned_window, text=log_frame_text, padding="10")
-        log_frame.rowconfigure(1, weight=1)
-        log_frame.columnconfigure(0, weight=1)
-        paned_window.add(log_frame, weight=3)
-
-        self.progress_label = ttk.Label(log_frame, text="")
-        self.progress_label.grid(row=0, column=0, sticky="ew", pady=(0, 2))
-
-        self.log_text = scrolledtext.ScrolledText(
-            log_frame, height=10, font=("Consolas", 10), state="disabled", wrap=tk.WORD
+        # ---- Progresso e Logs ----
+        log_outer = ctk.CTkFrame(
+            self, fg_color=COLOR_SURFACE, corner_radius=8,
+            border_width=1, border_color=COLOR_BORDER,
         )
-        self.log_text.grid(row=1, column=0, sticky="nsew")
+        log_outer.grid(row=4, column=0, sticky="nsew", padx=16, pady=(10, 0))
+        log_outer.grid_rowconfigure(1, weight=1)
+        log_outer.grid_columnconfigure(0, weight=1)
+        log_outer.grid_columnconfigure(1, weight=1)
 
-        # Estilos de log para feedback visual
-        self.log_text.tag_config(
-            "sucesso", foreground="green", font=("Consolas", 10, "bold")
+        ctk.CTkLabel(
+            log_outer, text="Progresso e Logs",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED, anchor="w",
+        ).grid(row=0, column=0, sticky="w", padx=12, pady=(8, 4))
+        self.progress_label = ctk.CTkLabel(
+            log_outer, text="",
+            font=ctk.CTkFont(size=FONT_SM), text_color=COLOR_TEXT_MUTED, anchor="e",
         )
-        self.log_text.tag_config(
-            "erro_servico", foreground="red", font=("Consolas", 10, "bold")
-        )
-        self.log_text.tag_config(
-            "erro_conexao", foreground="red", font=("Consolas", 10, "bold")
-        )
-        self.log_text.tag_config("info", foreground="gray")
-        self.log_text.tag_config(
-            "response", background="#f0f0f0", lmargin1=10, lmargin2=10
-        )
+        self.progress_label.grid(row=0, column=1, sticky="e", padx=12, pady=(8, 4))
 
-        # --- Botões de Ação ---
-        botoes_frame = ttk.Frame(main_frame)
-        botoes_frame.grid(row=4, column=0, sticky="ew", pady=(10, 5))
+        self.log_text = ctk.CTkTextbox(
+            log_outer,
+            font=ctk.CTkFont(family="Consolas", size=10),
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, border_width=1,
+            text_color=COLOR_TEXT, wrap="word", state="disabled",
+        )
+        self.log_text.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=(0, 10))
 
-        # Inicia a thread de integração
-        self.start_btn = ttk.Button(
+        # Estilos de log via textbox interno
+        self.log_text._textbox.tag_config("sucesso",      foreground="#10B981", font=("Consolas", 10, "bold"))
+        self.log_text._textbox.tag_config("erro_servico", foreground="#EF4444", font=("Consolas", 10, "bold"))
+        self.log_text._textbox.tag_config("erro_conexao", foreground="#EF4444", font=("Consolas", 10, "bold"))
+        self.log_text._textbox.tag_config("info",     foreground="#8892A4")
+        self.log_text._textbox.tag_config("response", lmargin1=10, lmargin2=10)
+
+        # ---- Botões de Ação ----
+        botoes_frame = ctk.CTkFrame(self, fg_color="transparent")
+        botoes_frame.grid(row=5, column=0, sticky="ew", padx=16, pady=(12, 16))
+
+        self.start_btn = ctk.CTkButton(
             botoes_frame,
             text="Iniciar Integração",
+            height=34,
+            fg_color=COLOR_ACCENT, hover_color=COLOR_ACCENT_HOVER,
+            font=ctk.CTkFont(size=FONT_SM), corner_radius=6,
             command=self._on_start_click,
-            style="Accent.TButton",
         )
-        self.start_btn.pack(side="left", padx=(0, 10))
+        self.start_btn.pack(side="left", padx=(0, 8))
 
-        # Sinaliza interrupção para a thread
-        self.stop_btn = ttk.Button(
+        self.stop_btn = ctk.CTkButton(
             botoes_frame,
             text="Interromper",
-            command=self._on_stop_click,
-            state="disabled",
+            height=34,
+            fg_color=COLOR_SURFACE, hover_color=COLOR_HOVER,
+            border_width=1, border_color=COLOR_BORDER, text_color=COLOR_TEXT_MUTED,
+            font=ctk.CTkFont(size=FONT_SM), corner_radius=6,
+            state="disabled", command=self._on_stop_click,
         )
-        self.stop_btn.pack(side="left", padx=(0, 10))
+        self.stop_btn.pack(side="left", padx=(0, 8))
 
-        # Abre modal para visualizar XML de retorno formatado
-        self.view_xml_btn = ttk.Button(
+        self.view_xml_btn = ctk.CTkButton(
             botoes_frame,
             text="Visualizar XML de Retorno",
-            command=self._on_view_xml_click,
-            state="disabled",
+            height=34,
+            fg_color=COLOR_SURFACE, hover_color=COLOR_HOVER,
+            border_width=1, border_color=COLOR_BORDER, text_color=COLOR_TEXT_MUTED,
+            font=ctk.CTkFont(size=FONT_SM), corner_radius=6,
+            state="disabled", command=self._on_view_xml_click,
         )
-        self.view_xml_btn.pack(side="left", padx=(0, 10))
+        self.view_xml_btn.pack(side="left")
 
         # Buffer com o último XML bruto de resposta
         self.last_response_text = ""
-
-        # OBS: Botão "Voltar ao Menu" foi REMOVIDO conforme solicitado.
 
     def _validate_numeric_input(self, new_value, max_len):
         """
@@ -333,16 +391,16 @@ class FerramentaSOAPFrame(ttk.Frame):
             return
 
         # Atualiza estado da UI para execução
-        self.start_btn.config(state="disabled")
-        self.stop_btn.config(state="normal")
-        self.view_xml_btn.config(state="disabled")
+        self.start_btn.configure(state="disabled")
+        self.stop_btn.configure(state="normal")
+        self.view_xml_btn.configure(state="disabled")
         self.last_response_text = ""
         self.deve_interromper.clear()
 
         # Reseta logs
         self.log_text.configure(state="normal")
-        self.log_text.delete("1.0", "end")
-        self.log_text.insert("1.0", "Tentando comunicar...\n", "info")
+        self.log_text._textbox.delete("1.0", "end")
+        self.log_text._textbox.insert("1.0", "Tentando comunicar...\n")
         self.log_text.configure(state="disabled")
 
         # Thread de trabalho (daemon) para não bloquear a UI
@@ -364,7 +422,7 @@ class FerramentaSOAPFrame(ttk.Frame):
         ):
             self.deve_interromper.set()
             self._atualizar_log("Interrupção solicitada...", tags="info")
-            self.stop_btn.config(state="disabled")
+            self.stop_btn.configure(state="disabled")
 
     def _iniciar_processo(self):
         """
@@ -461,7 +519,7 @@ class FerramentaSOAPFrame(ttk.Frame):
             if not self.deve_interromper.is_set()
             else "Processo interrompido!"
         )
-        self.after(0, lambda: self.progress_label.config(text=final_message))
+        self.after(0, lambda: self.progress_label.configure(text=final_message))
         self.after(0, self._reset_ui)
 
     def _limpar_log_inicial(self):
@@ -469,7 +527,7 @@ class FerramentaSOAPFrame(ttk.Frame):
         Limpa o texto inicial 'Tentando comunicar...' antes de inserir logs reais.
         """
         self.log_text.configure(state="normal")
-        self.log_text.delete("1.0", "end")
+        self.log_text._textbox.delete("1.0", "end")
         self.log_text.configure(state="disabled")
 
     def _processar_resposta_servico(self, index, response_text):
@@ -485,7 +543,7 @@ class FerramentaSOAPFrame(ttk.Frame):
             response_text (str): XML bruto da resposta HTTP.
         """
         self.last_response_text = response_text
-        self.view_xml_btn.config(state="normal")
+        self.view_xml_btn.configure(state="normal")
 
         try:
             root = ET.fromstring(response_text)
@@ -568,27 +626,27 @@ class FerramentaSOAPFrame(ttk.Frame):
     def _on_view_xml_click(self):
         """
         Abre um modal com o XML de retorno formatado.
-        - Caso ainda não haja resposta, exibe alerta informativo.
         """
         if not self.last_response_text:
-            messagebox.showinfo(
-                "Nenhuma Resposta", "Nenhuma resposta foi recebida ainda."
-            )
+            messagebox.showinfo("Nenhuma Resposta", "Nenhuma resposta foi recebida ainda.")
             return
 
-        # Cria janela modal para exibir o retorno
-        modal = tk.Toplevel(self)
+        modal = ctk.CTkToplevel(self)
         modal.title("XML de Retorno Completo")
-        modal.geometry("800x600")
+        modal.geometry("860x620")
         modal.transient(self.winfo_toplevel())
         modal.grab_set()
+        modal.grid_rowconfigure(0, weight=1)
+        modal.grid_columnconfigure(0, weight=1)
 
-        text_widget = scrolledtext.ScrolledText(
-            modal, font=("Consolas", 10), wrap=tk.WORD
+        text_widget = ctk.CTkTextbox(
+            modal,
+            font=ctk.CTkFont(family="Consolas", size=10),
+            fg_color=COLOR_SURFACE_ALT, border_color=COLOR_BORDER, border_width=1,
+            text_color=COLOR_TEXT, wrap="word",
         )
-        text_widget.pack(fill="both", expand=True, padx=10, pady=10)
+        text_widget.grid(row=0, column=0, sticky="nsew", padx=12, pady=(12, 6))
 
-        # Tenta formatar o nó Result (quando presente); senão, todo o XML bruto
         try:
             root = ET.fromstring(self.last_response_text)
             result_element = root.find(".//{http://tempuri.org/}Result")
@@ -597,36 +655,37 @@ class FerramentaSOAPFrame(ttk.Frame):
         except (ET.ParseError, AttributeError):
             formatted_xml = self._format_xml(self.last_response_text)
 
-        text_widget.insert("1.0", formatted_xml)
+        text_widget.insert("end", formatted_xml)
         text_widget.configure(state="disabled")
 
-        close_btn = ttk.Button(modal, text="Fechar", command=modal.destroy)
-        close_btn.pack(pady=10)
+        ctk.CTkButton(
+            modal, text="Fechar",
+            fg_color=COLOR_SURFACE, hover_color=COLOR_HOVER,
+            border_width=1, border_color=COLOR_BORDER,
+            text_color=COLOR_TEXT_MUTED,
+            font=ctk.CTkFont(size=FONT_SM), corner_radius=6,
+            command=modal.destroy,
+        ).grid(row=1, column=0, pady=(0, 12))
 
     def _reset_ui(self):
         """
         Restaura o estado dos botões após término/interrupção do processo.
         """
-        self.start_btn.config(state="normal")
-        self.stop_btn.config(state="disabled")
-        self.view_xml_btn.config(
+        self.start_btn.configure(state="normal")
+        self.stop_btn.configure(state="disabled")
+        self.view_xml_btn.configure(
             state="normal" if self.last_response_text else "disabled"
         )
 
     def _atualizar_log(self, message, tags=None):
         """
         Acrescenta uma linha ao log, preservando formatação/cores por tags.
-        Usa 'state=disabled' para impedir edição manual.
-
-        Args:
-            message (str): texto a ser inserido no fim do log.
-            tags (str|tuple|None): tag(s) para estilização ('sucesso', 'erro_conexao', etc.).
         """
         self.log_text.configure(state="normal")
         if tags:
-            self.log_text.insert("end", (message or "") + "\n", tags)
+            self.log_text._textbox.insert("end", (message or "") + "\n", tags)
         else:
-            self.log_text.insert("end", (message or "") + "\n")
+            self.log_text._textbox.insert("end", (message or "") + "\n")
         self.log_text.configure(state="disabled")
         self.log_text.see("end")
 
@@ -646,9 +705,9 @@ class FerramentaSOAPFrame(ttk.Frame):
         self.payload_text.insert("1.0", xml_string)
 
         # Reseta indicadores visuais
-        self.progress_label.config(text="")
+        self.progress_label.configure(text="")
         self.log_text.configure(state="normal")
-        self.log_text.delete("1.0", "end")
+        self.log_text._textbox.delete("1.0", "end")
         self.log_text.configure(state="disabled")
 
         # Log simples via stdout (apoio ao dev)

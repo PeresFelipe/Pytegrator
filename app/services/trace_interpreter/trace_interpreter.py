@@ -10,20 +10,32 @@ import json
 import os
 import re
 from PIL import Image
+from app.ui.theme import (
+    COLOR_BG,
+    COLOR_SURFACE,
+    COLOR_SURFACE_ALT,
+    COLOR_BORDER,
+    COLOR_ACCENT,
+    COLOR_ACCENT_HOVER,
+    COLOR_ERROR,
+    COLOR_SUCCESS,
+    COLOR_TEXT,
+    COLOR_TEXT_MUTED,
+)
 
-# ---------------------- Design Tokens (dark) ----------------------
-BG_APP = ("#0B1220", "#0B1220")
-SURFACE = ("#111827", "#111827")
-SURFACE_ALT = ("#0F172A", "#0F172A")
-BORDER = ("#1F2937", "#1F2937")
-PRIMARY = ("#22C55E", "#22C55E")
-PRIMARY_HOVER = ("#16A34A", "#4A7058")
-ACCENT = ("#38BDF8", "#38BDF8")
-ERROR = ("#F43F5E", "#F43F5E")
-OK = ("#10B981", "#10B981")
-TEXT = ("#E5E7EB", "#E5E7EB")
-TEXT_MUTED = ("#9CA3AF", "#9CA3AF")
-MONO_BG = ("#0D172A", "#0D172A")
+# ---------------------- Design Tokens (app.ui.theme) ----------------------
+BG_APP = COLOR_BG
+SURFACE = COLOR_SURFACE
+SURFACE_ALT = COLOR_SURFACE_ALT
+BORDER = COLOR_BORDER
+PRIMARY = COLOR_ACCENT
+PRIMARY_HOVER = COLOR_ACCENT_HOVER
+ACCENT = COLOR_ACCENT
+ERROR = COLOR_ERROR
+OK = COLOR_SUCCESS
+TEXT = COLOR_TEXT
+TEXT_MUTED = COLOR_TEXT_MUTED
+MONO_BG = COLOR_SURFACE_ALT
 
 # Largura fixa do drawer
 DRAWER_WIDTH = 360
@@ -41,11 +53,6 @@ class TraceInterpreterFrame(ctk.CTkFrame):
     """
 
     # ---------------------- Helpers ----------------------
-    @staticmethod
-    def _c(color):
-        """Converte tupla de cor CTk em string, quando necessário."""
-        return color[0] if isinstance(color, tuple) else color
-
     @staticmethod
     def _norm(s: str) -> str:
         """Normaliza string (trim + lower) para filtros."""
@@ -145,7 +152,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             header,
             text="Interpretador de Trace SQL",
             font=ctk.CTkFont(size=18, weight="bold"),
-            text_color=self._c(TEXT),
+            text_color=TEXT,
         ).grid(row=0, column=0, sticky="w", padx=16, pady=12)
 
         # Box "Eventos" ~308x85
@@ -169,13 +176,13 @@ class TraceInterpreterFrame(ctk.CTkFrame):
         ctk.CTkLabel(
             inner,
             text="Eventos",
-            text_color=self._c(TEXT_MUTED),
+            text_color=TEXT_MUTED,
             font=ctk.CTkFont(size=12, weight="bold"),
         ).grid(row=0, column=0, sticky="w")
         self.header_events_info = ctk.CTkLabel(
             inner,
             text="Total: 0 • Filtrados: 0",
-            text_color=self._c(TEXT_MUTED),
+            text_color=TEXT_MUTED,
             justify="left",
             anchor="w",
             wraplength=280,
@@ -186,9 +193,9 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             inner,
             text="Abrir lista",
             height=28,
-            fg_color=self._c(PRIMARY),
-            hover_color=self._c(PRIMARY_HOVER),
-            text_color="black",
+            fg_color=PRIMARY,
+            hover_color=PRIMARY_HOVER,
+            text_color="white",
             command=self._toggle_events_drawer,
         )
         self.btn_abrir_lista.grid(row=0, column=1, rowspan=2, sticky="e")
@@ -199,9 +206,9 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             image=self.icon_upload,
             compound="left",
             height=36,
-            fg_color=self._c(PRIMARY),
-            hover_color=self._c(PRIMARY_HOVER),
-            text_color="black",
+            fg_color=PRIMARY,
+            hover_color=PRIMARY_HOVER,
+            text_color="white",
             command=self.carregar_e_processar_json,
         )
         self.btn_carregar.grid(row=0, column=2, sticky="e", padx=12, pady=12)
@@ -223,11 +230,11 @@ class TraceInterpreterFrame(ctk.CTkFrame):
         ctk.CTkLabel(
             self.sidebar,
             text="Filtros",
-            text_color=self._c(TEXT_MUTED),
+            text_color=TEXT_MUTED,
             font=ctk.CTkFont(size=12, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=14, pady=(14, 8))
 
-        ctk.CTkLabel(self.sidebar, text="Campo", text_color=self._c(TEXT_MUTED)).grid(
+        ctk.CTkLabel(self.sidebar, text="Campo", text_color=TEXT_MUTED).grid(
             row=1, column=0, sticky="w", padx=14
         )
         self.field_var = ctk.StringVar(value="selecionar")
@@ -240,7 +247,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
         )
         self.field_combo.grid(row=2, column=0, sticky="ew", padx=14, pady=(4, 10))
 
-        ctk.CTkLabel(self.sidebar, text="Valor", text_color=self._c(TEXT_MUTED)).grid(
+        ctk.CTkLabel(self.sidebar, text="Valor", text_color=TEXT_MUTED).grid(
             row=3, column=0, sticky="w", padx=14
         )
         self.filter_value_var = ctk.StringVar()
@@ -253,7 +260,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             row=4, column=0, sticky="ew", padx=14, pady=(4, 10)
         )
 
-        ctk.CTkLabel(self.sidebar, text="Status", text_color=self._c(TEXT_MUTED)).grid(
+        ctk.CTkLabel(self.sidebar, text="Status", text_color=TEXT_MUTED).grid(
             row=5, column=0, sticky="w", padx=14
         )
         self.error_only_var = ctk.BooleanVar(value=False)
@@ -275,9 +282,9 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             image=self.icon_search,
             compound="left",
             height=34,
-            fg_color=self._c(PRIMARY),
-            hover_color=self._c(PRIMARY_HOVER),
-            text_color="black",
+            fg_color=PRIMARY,
+            hover_color=PRIMARY_HOVER,
+            text_color="white",
             command=self.filtrar_eventos,
         )
         self.btn_search.grid(row=0, column=0, sticky="ew", padx=(0, 6))
@@ -291,7 +298,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             fg_color="transparent",
             border_width=1,
             border_color=BORDER,
-            text_color=self._c(TEXT_MUTED),
+            text_color=TEXT_MUTED,
             hover=False,
             command=self.limpar_filtros,
         )
@@ -304,7 +311,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
         self.success_frame.grid(row=8, column=0, sticky="ew", padx=14, pady=(4, 14))
         self.success_frame.grid_remove()
         self.success_label = ctk.CTkLabel(
-            self.success_frame, text="", text_color=self._c(OK)
+            self.success_frame, text="", text_color=OK
         )
         self.success_label.pack(fill="x", padx=10, pady=10)
 
@@ -325,7 +332,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
         ctk.CTkLabel(
             right,
             text="Detalhes do Evento",
-            text_color=self._c(TEXT_MUTED),
+            text_color=TEXT_MUTED,
             font=ctk.CTkFont(size=13, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 8))
 
@@ -339,7 +346,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             side="left", padx=(10, 6)
         )
         self.current_exec_label = ctk.CTkLabel(
-            badge_now, text="Execução Atual:\n--", text_color=self._c(TEXT)
+            badge_now, text="Execução Atual:\n--", text_color=TEXT
         )
         self.current_exec_label.pack(side="left", padx=(0, 10))
 
@@ -351,7 +358,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
         self.slowest_exec_label = ctk.CTkLabel(
             badge_peak,
             text="Pico de Execução:\n--",
-            text_color=self._c(TEXT),
+            text_color=TEXT,
             cursor="hand2",
         )
         self.slowest_exec_label.pack(side="left", padx=(0, 10))
@@ -363,8 +370,8 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             wrap="word",
             border_width=1,
             border_color=BORDER,
-            fg_color=self._c(MONO_BG),
-            text_color=self._c(TEXT),
+            fg_color=MONO_BG,
+            text_color=TEXT,
             corner_radius=10,
         )
         self.details_text.grid(row=3, column=0, sticky="nsew", padx=16, pady=(4, 14))
@@ -400,7 +407,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
         ctk.CTkLabel(
             top,
             text="Eventos",
-            text_color=self._c(TEXT_MUTED),
+            text_color=TEXT_MUTED,
             font=ctk.CTkFont(size=12, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=8, pady=(8, 6))
 
@@ -411,7 +418,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             fg_color="transparent",
             border_width=1,
             border_color=BORDER,
-            text_color=self._c(TEXT_MUTED),
+            text_color=TEXT_MUTED,
             command=self._toggle_events_drawer,
         )
         close_btn.grid(row=0, column=1, sticky="e", padx=8, pady=(8, 6))
@@ -473,6 +480,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
         border_col = ERROR if has_error else ACCENT
         badge_text = "ERRO" if has_error else "OK"
         badge_color = ERROR if has_error else OK
+        badge_text_color = "white" if has_error else "black"
 
         card = ctk.CTkFrame(
             self.events_sf,
@@ -498,7 +506,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             top,
             text=object_name_wrapped,
             font=self.font_title,
-            text_color=self._c(TEXT),
+            text_color=TEXT,
             justify="left",
             anchor="w",
             wraplength=DRAWER_WIDTH - 100,
@@ -509,7 +517,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
             top,
             text=badge_text,
             fg_color=badge_color,
-            text_color="black",
+            text_color=badge_text_color,
             corner_radius=50,
             padx=8,
             pady=2,
@@ -525,7 +533,7 @@ class TraceInterpreterFrame(ctk.CTkFrame):
         meta = ctk.CTkLabel(
             card,
             text=meta_text,
-            text_color=self._c(TEXT_MUTED),
+            text_color=TEXT_MUTED,
             justify="left",
             anchor="w",
         )

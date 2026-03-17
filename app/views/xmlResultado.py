@@ -13,11 +13,26 @@ Melhorias neste arquivo:
 - Removido modal "Não há XML para copiar." — agora o feedback é discreto no label.
 """
 
-import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
+import customtkinter as ctk
+
+from app.ui.theme import (
+    COLOR_BG,
+    COLOR_SURFACE,
+    COLOR_SURFACE_ALT,
+    COLOR_BORDER,
+    COLOR_TEXT,
+    COLOR_TEXT_MUTED,
+    COLOR_ACCENT,
+    COLOR_ACCENT_HOVER,
+    COLOR_SUCCESS,
+    COLOR_ERROR,
+    COLOR_HOVER,
+    FONT_SM,
+)
 
 
-class ResultadoFrame(ttk.Frame):
+class ResultadoFrame(ctk.CTkFrame):
     """
     Frame responsável por exibir o XML gerado, com ações para:
       - Copiar o XML para a área de transferência.
@@ -34,7 +49,7 @@ class ResultadoFrame(ttk.Frame):
             controller: controlador principal da aplicação, usado para navegação
                         e acesso a outros frames (ex.: tela SOAP).
         """
-        super().__init__(parent)
+        super().__init__(parent, fg_color=COLOR_BG)
         self.controller = controller
         self.xml_string: str = ""  # Armazena o XML atual exibido na tela
 
@@ -48,72 +63,90 @@ class ResultadoFrame(ttk.Frame):
     # ------------------------------------------------------------------ #
     def _criar_widgets(self) -> None:
         """Cria e posiciona todos os widgets da interface (título, editor, botões)."""
-        container = ttk.Frame(self, padding="10")
-        container.pack(fill="both", expand=True)
+        container = ctk.CTkFrame(self, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=16, pady=16)
         container.columnconfigure(0, weight=1)
         container.rowconfigure(1, weight=1)
 
         # Barra de título
-        title_bar = tk.Label(
+        title_bar = ctk.CTkLabel(
             container,
             text="XML Gerado com Sucesso",
-            bg="#005a9e",
-            fg="white",
-            font=("Helvetica", 12, "bold"),
-            padx=10,
-            pady=5,
+            fg_color=COLOR_SURFACE,
+            corner_radius=10,
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=COLOR_TEXT,
             anchor="w",
         )
-        title_bar.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        title_bar.grid(row=0, column=0, sticky="ew", pady=(0, 10), padx=0, ipady=10)
 
-        # Área de texto + scrollbar
-        text_frame = ttk.Frame(container)
-        text_frame.grid(row=1, column=0, columnspan=2, sticky="nsew")
-        text_frame.rowconfigure(0, weight=1)
-        text_frame.columnconfigure(0, weight=1)
-
-        self.xml_text = tk.Text(
-            text_frame,
+        # Área de texto
+        self.xml_text = ctk.CTkTextbox(
+            container,
+            fg_color=COLOR_SURFACE_ALT,
+            border_color=COLOR_BORDER,
+            border_width=1,
+            text_color=COLOR_TEXT,
             wrap="word",
-            font=("Consolas", 10),
-            padx=5,
-            pady=5,
-            borderwidth=1,
-            relief="solid",
+            font=ctk.CTkFont(family="Consolas", size=10),
+            corner_radius=10,
         )
-        self.xml_text.grid(row=0, column=0, sticky="nsew")
-
-        scrollbar = ttk.Scrollbar(
-            text_frame, orient="vertical", command=self.xml_text.yview
-        )
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        self.xml_text.config(yscrollcommand=scrollbar.set)
+        self.xml_text.grid(row=1, column=0, sticky="nsew")
+        self.xml_text.configure(state="disabled")
 
         # Label de feedback (ex.: “copiado com sucesso” ou avisos discretos)
-        self.copiado_label = ttk.Label(container, text="", foreground="green")
+        self.copiado_label = ctk.CTkLabel(
+            container,
+            text="",
+            text_color=COLOR_SUCCESS,
+            anchor="w",
+            font=ctk.CTkFont(size=FONT_SM),
+        )
         self.copiado_label.grid(row=2, column=0, sticky="w", padx=5, pady=(5, 0))
 
         # Barra de botões (direita)
-        button_frame = ttk.Frame(container)
-        button_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        button_frame = ctk.CTkFrame(container, fg_color="transparent")
+        button_frame.grid(row=3, column=0, sticky="ew", pady=(10, 0))
 
         # OBS: botão "Voltar ao Menu" foi removido conforme solicitado.
 
         # Voltar ao gerador (tela anterior)
-        self.voltar_gerador_button = ttk.Button(
-            button_frame, text="Voltar à Geração do XML"
+        self.voltar_gerador_button = ctk.CTkButton(
+            button_frame,
+            height=34,
+            text="Voltar à Geração do XML",
+            fg_color=COLOR_SURFACE,
+            hover_color=COLOR_HOVER,
+            border_width=1,
+            border_color=COLOR_BORDER,
+            text_color=COLOR_TEXT_MUTED,
+            font=ctk.CTkFont(size=FONT_SM),
         )
         self.voltar_gerador_button.pack(side="right", padx=(5, 0))
 
         # Copiar XML
-        self.copiar_button = ttk.Button(button_frame, text="Copiar XML")
+        self.copiar_button = ctk.CTkButton(
+            button_frame,
+            height=34,
+            text="Copiar XML",
+            fg_color=COLOR_SURFACE,
+            hover_color=COLOR_HOVER,
+            border_width=1,
+            border_color=COLOR_BORDER,
+            text_color=COLOR_TEXT_MUTED,
+            font=ctk.CTkFont(size=FONT_SM),
+        )
         self.copiar_button.pack(side="right", padx=(5, 0))
 
         # Copiar e ir para a integração SOAP
-        self.copiar_e_integrar_button = ttk.Button(
+        self.copiar_e_integrar_button = ctk.CTkButton(
             button_frame,
+            height=34,
             text="Copiar XML e ir para Integração",
-            style="Accent.TButton",
+            fg_color=COLOR_ACCENT,
+            hover_color=COLOR_ACCENT_HOVER,
+            text_color="white",
+            font=ctk.CTkFont(size=FONT_SM, weight="bold"),
         )
         self.copiar_e_integrar_button.pack(side="right")
 
@@ -122,11 +155,11 @@ class ResultadoFrame(ttk.Frame):
     # ------------------------------------------------------------------ #
     def _configurar_eventos(self) -> None:
         """Associa callbacks aos botões e define as rotas de navegação."""
-        self.copiar_button.config(command=self.copiar_xml)
-        self.voltar_gerador_button.config(
+        self.copiar_button.configure(command=self.copiar_xml)
+        self.voltar_gerador_button.configure(
             command=lambda: self.controller.show_frame("Gerador207")
         )
-        self.copiar_e_integrar_button.config(command=self.copiar_e_integrar)
+        self.copiar_e_integrar_button.configure(command=self.copiar_e_integrar)
 
     def _bind_shortcuts(self) -> None:
         """
@@ -134,16 +167,28 @@ class ResultadoFrame(ttk.Frame):
           - Ctrl/Cmd + C: copiar XML
           - Ctrl/Cmd + I: copiar e abrir integração SOAP
         """
-        # Suporte Windows/Linux (Control) e macOS (Command/Meta)
-        self.bind_all("<Control-c>", lambda e: self.copiar_xml())
-        self.bind_all("<Control-C>", lambda e: self.copiar_xml())
-        self.bind_all("<Command-c>", lambda e: self.copiar_xml())
-        self.bind_all("<Command-C>", lambda e: self.copiar_xml())
+        # CTk widgets bloqueiam bind_all; usamos bind no toplevel com add="+"
+        target = self.winfo_toplevel()
 
-        self.bind_all("<Control-i>", lambda e: self.copiar_e_integrar())
-        self.bind_all("<Control-I>", lambda e: self.copiar_e_integrar())
-        self.bind_all("<Command-i>", lambda e: self.copiar_e_integrar())
-        self.bind_all("<Command-I>", lambda e: self.copiar_e_integrar())
+        for seq in ("<Control-c>", "<Control-C>", "<Command-c>", "<Command-C>"):
+            target.bind(seq, self._on_copy_shortcut, add="+")
+
+        for seq in ("<Control-i>", "<Control-I>", "<Command-i>", "<Command-I>"):
+            target.bind(seq, self._on_integrate_shortcut, add="+")
+
+    def _on_copy_shortcut(self, _event=None):
+        """Atalho de cópia ativo apenas quando esta tela está visível."""
+        if not self.winfo_viewable():
+            return None
+        self.copiar_xml()
+        return "break"
+
+    def _on_integrate_shortcut(self, _event=None):
+        """Atalho de integração ativo apenas quando esta tela está visível."""
+        if not self.winfo_viewable():
+            return None
+        self.copiar_e_integrar()
+        return "break"
 
     # ------------------------------------------------------------------ #
     # API pública do frame
@@ -166,7 +211,7 @@ class ResultadoFrame(ttk.Frame):
             ),
         )
         # Limpa mensagens de feedback anteriores
-        self.copiado_label.config(text="", foreground="green")
+        self.copiado_label.configure(text="", text_color=COLOR_SUCCESS)
 
     # ------------------------------------------------------------------ #
     # Ações de UI
@@ -180,11 +225,9 @@ class ResultadoFrame(ttk.Frame):
         """
         if not self.xml_string:
             # Sem modal: feedback discreto na própria tela
-            self.copiado_label.config(
-                text="Nenhum XML para copiar.", foreground="#A94442"
-            )
+            self.copiado_label.configure(text="Nenhum XML para copiar.", text_color=COLOR_ERROR)
             self.after(
-                2500, lambda: self.copiado_label.config(text="", foreground="green")
+                2500, lambda: self.copiado_label.configure(text="", text_color=COLOR_SUCCESS)
             )
             return
 
@@ -195,11 +238,9 @@ class ResultadoFrame(ttk.Frame):
             self.update_idletasks()
 
             if show_message:
-                self.copiado_label.config(
-                    text="XML copiado com sucesso!", foreground="green"
-                )
+                self.copiado_label.configure(text="XML copiado com sucesso!", text_color=COLOR_SUCCESS)
                 # Limpa feedback após alguns segundos
-                self.after(2500, lambda: self.copiado_label.config(text=""))
+                self.after(2500, lambda: self.copiado_label.configure(text=""))
 
         except Exception as e:
             messagebox.showerror("Erro de Cópia", f"Não foi possível copiar o XML: {e}")
@@ -235,24 +276,33 @@ class ResultadoFrame(ttk.Frame):
     # Utilidades
     # ------------------------------------------------------------------ #
     @staticmethod
-    def _set_text_content(text_widget: tk.Text, content: str) -> None:
+    def _set_text_content(text_widget: ctk.CTkTextbox, content: str) -> None:
         """
-        Helper para atualizar um tk.Text preservando a imutabilidade externa.
+        Helper para atualizar um CTkTextbox preservando a imutabilidade externa.
 
         - Coloca o widget em 'normal', altera o conteúdo e volta para 'disabled'.
         - Evita repetição desse padrão em vários pontos do código.
 
         Args:
-            text_widget: instância de tk.Text a ser atualizada.
+            text_widget: instância de CTkTextbox a ser atualizada.
             content: texto que será inserido (string).
         """
-        # Captura o estado anterior e garante um valor compatível com o tipo Literal
-        prev = str(text_widget.cget("state"))
+        # CTkTextbox não expõe cget("state") na API pública; usa o Text interno.
+        base_text = getattr(text_widget, "_textbox", None)
+        if base_text is None:
+            # Fallback defensivo raro: tenta atualizar sem preservar estado.
+            text_widget.configure(state="normal")
+            text_widget.delete("1.0", "end")
+            text_widget.insert("1.0", content or "")
+            text_widget.configure(state="disabled")
+            return
+
+        prev = str(base_text.cget("state"))
         previous_state_literal = "normal" if prev == "normal" else "disabled"
         try:
-            text_widget.config(state="normal")
+            text_widget.configure(state="normal")
             text_widget.delete("1.0", "end")
             text_widget.insert("1.0", content or "")
         finally:
             # Retorna ao estado anterior (garantido como 'normal' ou 'disabled')
-            text_widget.config(state=previous_state_literal)
+            text_widget.configure(state=previous_state_literal)
