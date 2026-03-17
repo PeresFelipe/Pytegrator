@@ -1,4 +1,5 @@
-# main.py — CustomTkinter com seções e ajuste de texto nos cards
+# main.py - Pytegrator - Linear-inspired 3-column shell
+# Backend (app/lib, app/services logic, core) is untouched.
 
 import customtkinter as ctk
 import tkinter as tk
@@ -7,116 +8,238 @@ import logging
 import os
 import sys
 import ctypes
-from typing import Dict, Union, List, Callable, Any
-from PIL import Image
+from typing import Dict, Any
 
 
-# --- Configuração de Path e Logging ---
-def setup_environment():
-    """Configura o path do sistema e inicializa o logger."""
+# ── Environment & logging ───────────────────────────────────────────────────
+
+def setup_environment() -> None:
+    """Add the project root to sys.path and initialise the logger."""
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
-        logging.info(f"Adicionado diretório raiz ao sys.path: {project_root}")
-
     try:
         from core.logger_config import setup_logging
-
         setup_logging()
-    except (ImportError, ModuleNotFoundError) as e:
+    except (ImportError, ModuleNotFoundError) as exc:
         logging.basicConfig(
             level=logging.INFO,
-            format="%(asctime)s - %(levelname)s - Módulo de log não encontrado: %(message)s",
+            format="%(asctime)s - %(levelname)s - %(message)s",
         )
-        logging.warning(
-            f"Falha ao carregar 'core.logger_config': {e}. Usando config básica."
-        )
+        logging.warning(f"Logger personalizado nao carregado: {exc}")
 
 
-# --- Imports da Aplicação ---
+# ── Application imports ─────────────────────────────────────────────────────
+
 from app.lib.mappers import codigoMapper
 from app.services.serviço_207.form_207 import Gerador207Frame
 from app.services.soap.form_ferramentasoap import FerramentaSOAPFrame
 from app.services.trace_interpreter.trace_interpreter import TraceInterpreterFrame
 from app.views.xmlResultado import ResultadoFrame
+from app.ui.theme import (
+    COLOR_BG, COLOR_SURFACE, COLOR_SURFACE_ALT, COLOR_BORDER,
+    COLOR_TEXT, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_ACCENT_HOVER,
+    SIDEBAR_BG, SIDEBAR_HOVER, SIDEBAR_ACTIVE, SIDEBAR_WIDTH,
+    SPACE_SM, SPACE_MD, SPACE_LG, SPACE_XL,
+    RADIUS_MD, RADIUS_LG,
+    FONT_SM, FONT_MD, FONT_XL, FONT_2XL,
+    c,
+)
 
 
-# --- Constantes ---
-APP_NAME = "Pytegrator"
-DEFAULT_WIDTH = 1366
+# ── Constants ───────────────────────────────────────────────────────────────
+
+APP_NAME       = "Pytegrator"
+DEFAULT_WIDTH  = 1366
 DEFAULT_HEIGHT = 768
-ICON_PATH = os.path.join("app", "assets", "icon.ico")
-SOAP_ICON_PATH = os.path.join("app", "assets", "soap_icon.png")
-XML_ICON_PATH = os.path.join("app", "assets", "xml_icon.png")
-TRACE_ICON_PATH = os.path.join("app", "assets", "trace_icon.png")
+ICON_PATH      = os.path.join("app", "assets", "icon.ico")
 
-# Paleta (dark elegante)
-BG_APP = ("#0B1220", "#0B1220")  # fundo da janela
-APPBAR_BG = ("#0F172A", "#0F172A")
-APPBAR_FG = ("#E5E7EB", "#E5E7EB")
-SURFACE = ("#111827", "#111827")
-SURFACE_ALT = ("#0F172A", "#0F172A")
-BORDER = ("#1F2937", "#1F2937")
-TEXT = ("#E5E7EB", "#E5E7EB")
-TEXT_MUTED = ("#9CA3AF", "#9CA3AF")
-PRIMARY = ("#22C55E", "#22C55E")
-PRIMARY_HOVER = ("#16A34A", "#16A34A")
-CARD_HOVER = ("#101826", "#101826")
+# ── Navigation manifest ─────────────────────────────────────────────────────
+# (frame_key, display_label, icon_char, section_key)
 
+NAV_ITEMS = [
+    ("Gerador207",       "Gerador 207",       "  ", "integrador"),
+    ("FerramentaSOAP",   "Integracao SOAP",    "  ", "integrador"),
+    ("Resultado",        "Resultado XML",      "  ", "integrador"),
+    ("TraceInterpreter", "Trace Interpreter",  "  ", "ferramentas"),
+]
+
+NAV_SECTIONS = {
+    "integrador":  "INTEGRADOR",
+    "ferramentas": "FERRAMENTAS",
+}
+
+
+# ── Main shell ───────────────────────────────────────────────────────────────
 
 class AppController(ctk.CTk):
     """
-    Controlador principal da aplicação em CustomTkinter.
-    Layout:
-    ┌───────────────────────────────────────────────────────────┐
-    │ AppBar (título + ações)                                   │
-    ├───────────────────────────────────────────────────────────┤
-    │ Content (container onde os Frames são empilhados)         │
-    └───────────────────────────────────────────────────────────┘
+    Main application window -- Linear-inspired 3-column layout.
+
+    Structure
+    ---------
+    +-------------+------------------------------------------------------+
+    |  SIDEBAR    |  CONTENT  (stacked frames raised on demand)          |
+    |  (fixed)    |                                                      |
+    |  App name   |  MenuPrincipal | Gerador207 | FerramentaSOAP | ...  |
+    |  Nav items  |                                                      |
+    |  ---------  |                                                      |
+    |  Footer     |                                                      |
+    +-------------+------------------------------------------------------+
+
+    Public API (consumed by service frames)
+    ----------------------------------------
+    - self.shared_data       -- dict used to pass data between frames
+    - self.show_frame(name)  -- raise the named frame
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        logging.info("Inicializando o controlador principal (CTk).")
+    def __init__(self) -> None:
+        super().__init__()
+        logging.info("Inicializando AppController (Linear shell).")
 
-        # Aparência global
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("green")
-        self.configure(fg_color=BG_APP)
+        ctk.set_default_color_theme("blue")
+        self.configure(fg_color=c(COLOR_BG))
 
         self.title(APP_NAME)
         self.geometry(f"{DEFAULT_WIDTH}x{DEFAULT_HEIGHT}")
-        # Permite redimensionar livremente; define um mínimo confortável para notebooks
-        self.minsize(1024, 640)
+        self.minsize(960, 600)
         self.resizable(True, True)
 
-        # Atalhos de janela: F11 (tela cheia) / Esc (sair de tela cheia)
-        self.is_fullscreen = False
-        self.bind("<F11>", lambda e: self._toggle_fullscreen())
-        self.bind("<Escape>", lambda e: self._exit_fullscreen())
+        self.is_fullscreen: bool = False
+        self.bind("<F11>", lambda _e: self._toggle_fullscreen())
+        self.bind("<Escape>", lambda _e: self._exit_fullscreen())
 
         self._center_window()
         self._load_app_icon()
 
-        self.shared_data: Dict = {"current_xml": ""}
+        # Shared state passed between frames
+        self.shared_data: Dict[str, Any] = {"current_xml": ""}
 
-        # Grid raiz
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        # Active nav button refs
+        self._nav_buttons: Dict[str, ctk.CTkButton] = {}
 
-        # --- AppBar ---
-        self._build_appbar()
+        # Root grid: col 0 = sidebar (fixed), col 1 = content (expands)
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
-        # --- Container de Conteúdo ---
-        self.container = ctk.CTkFrame(self, fg_color="transparent")
-        self.container.grid(row=1, column=0, sticky="nsew")
+        self._build_sidebar()
+        self._build_content()
+
+        logging.info("Shell pronto.")
+
+    # ── Sidebar ──────────────────────────────────────────────────────────────
+
+    def _build_sidebar(self) -> None:
+        sidebar = ctk.CTkFrame(
+            self,
+            fg_color=c(SIDEBAR_BG),
+            corner_radius=0,
+            width=SIDEBAR_WIDTH,
+            border_width=1,
+            border_color=c(COLOR_BORDER),
+        )
+        sidebar.grid(row=0, column=0, sticky="nsew")
+        sidebar.grid_propagate(False)
+        sidebar.grid_columnconfigure(0, weight=1)
+        sidebar.grid_rowconfigure(3, weight=1)   # spacer before footer
+
+        # -- Logo row --------------------------------------------------------
+        logo = ctk.CTkFrame(sidebar, fg_color="transparent")
+        logo.grid(row=0, column=0, sticky="ew",
+                  padx=SPACE_MD, pady=(SPACE_LG, SPACE_MD))
+
+        ctk.CTkLabel(
+            logo,
+            text="P",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=c(COLOR_ACCENT),
+            width=28,
+        ).pack(side="left", padx=(0, 6))
+
+        ctk.CTkLabel(
+            logo,
+            text=APP_NAME,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=c(COLOR_TEXT),
+        ).pack(side="left")
+
+        # -- Top divider -----------------------------------------------------
+        ctk.CTkFrame(
+            sidebar, fg_color=c(COLOR_BORDER), height=1, corner_radius=0
+        ).grid(row=1, column=0, sticky="ew")
+
+        # -- Navigation ------------------------------------------------------
+        nav = ctk.CTkFrame(sidebar, fg_color="transparent")
+        nav.grid(row=2, column=0, sticky="ew",
+                 padx=SPACE_SM, pady=(SPACE_SM, 0))
+
+        current_section: str = ""
+        for frame_key, label, icon, section in NAV_ITEMS:
+            if section != current_section:
+                current_section = section
+                ctk.CTkLabel(
+                    nav,
+                    text=NAV_SECTIONS.get(section, section.upper()),
+                    font=ctk.CTkFont(size=10, weight="bold"),
+                    text_color=c(COLOR_TEXT_MUTED),
+                    anchor="w",
+                ).pack(anchor="w", padx=SPACE_SM, pady=(SPACE_MD, 2))
+
+            btn = ctk.CTkButton(
+                nav,
+                text=f"{icon} {label}",
+                anchor="w",
+                height=34,
+                corner_radius=RADIUS_MD,
+                fg_color="transparent",
+                hover_color=c(SIDEBAR_HOVER),
+                text_color=c(COLOR_TEXT_MUTED),
+                font=ctk.CTkFont(size=FONT_SM),
+                command=lambda k=frame_key: self.show_frame(k),
+            )
+            btn.pack(fill="x", padx=2, pady=1)
+            self._nav_buttons[frame_key] = btn
+
+        # -- Spacer (row 3 has weight=1) -------------------------------------
+        ctk.CTkFrame(sidebar, fg_color="transparent").grid(
+            row=3, column=0, sticky="nsew"
+        )
+
+        # -- Footer divider --------------------------------------------------
+        ctk.CTkFrame(
+            sidebar, fg_color=c(COLOR_BORDER), height=1, corner_radius=0
+        ).grid(row=4, column=0, sticky="ew")
+
+        # -- Home button (footer) --------------------------------------------
+        home_btn = ctk.CTkButton(
+            sidebar,
+            text="  Inicio",
+            anchor="w",
+            height=36,
+            corner_radius=RADIUS_MD,
+            fg_color="transparent",
+            hover_color=c(SIDEBAR_HOVER),
+            text_color=c(COLOR_TEXT_MUTED),
+            font=ctk.CTkFont(size=FONT_SM),
+            command=lambda: self.show_frame("MenuPrincipal"),
+        )
+        home_btn.grid(row=5, column=0, sticky="ew",
+                      padx=SPACE_SM, pady=(SPACE_SM, SPACE_LG))
+        self._nav_buttons["MenuPrincipal"] = home_btn
+
+    # ── Content area ─────────────────────────────────────────────────────────
+
+    def _build_content(self) -> None:
+        self.container = ctk.CTkFrame(self, fg_color=c(COLOR_BG), corner_radius=0)
+        self.container.grid(row=0, column=1, sticky="nsew")
         self.container.grid_rowconfigure(0, weight=1)
         self.container.grid_columnconfigure(0, weight=1)
 
         self.frames: Dict[str, tk.Widget] = {}
 
-        # Tipagem relaxada para evitar conflito com módulos inferidos pela Pylance
-        frames_to_load: tuple[Any, ...] = (
+        frames_to_load: tuple = (
             MenuPrincipalFrame,
             Gerador207Frame,
             FerramentaSOAPFrame,
@@ -125,305 +248,231 @@ class AppController(ctk.CTk):
         )
 
         for F in frames_to_load:
-            frame_name = F.__name__.replace("Frame", "")
+            name = F.__name__.replace("Frame", "")
             frame = F(self.container, self)  # type: ignore[call-arg]
-            self.frames[frame_name] = frame
+            self.frames[name] = frame
             frame.grid(row=0, column=0, sticky="nsew")
-            logging.debug(f"Frame '{frame_name}' criado e armazenado.")
+            logging.debug(f"Frame '{name}' registered.")
 
         self.show_frame("MenuPrincipal")
-        logging.info("App pronto. Exibindo menu principal.")
 
-    # ------------------------- Controle de Janela -------------------------
-    def _toggle_fullscreen(self):
-        try:
-            self.is_fullscreen = not getattr(self, "is_fullscreen", False)
-            self.attributes("-fullscreen", self.is_fullscreen)
-        except Exception:
-            # Fallback no Windows: maximiza
-            if self.is_fullscreen:
-                try:
-                    self.state("zoomed")
-                except Exception:
-                    pass
+    # ── Navigation ───────────────────────────────────────────────────────────
 
-    def _exit_fullscreen(self):
-        try:
-            self.is_fullscreen = False
-            self.attributes("-fullscreen", False)
-        except Exception:
-            pass
-
-    # ------------------------- Navegação -------------------------
-    def show_frame(self, frame_name: str):
-        logging.info(f"Transicionando para a tela: {frame_name}")
+    def show_frame(self, frame_name: str) -> None:
+        logging.info(f"Navigating to: {frame_name}")
         frame = self.frames.get(frame_name)
 
         if not frame:
-            logging.error(f"Tentativa de mostrar um frame inexistente: {frame_name}")
+            logging.error(f"Frame not found: {frame_name!r}")
             messagebox.showerror(
-                "Erro de Navegação", f"A tela '{frame_name}' não foi encontrada."
+                "Erro de Navegacao",
+                f"A tela '{frame_name}' nao foi encontrada.",
             )
             return
 
         if frame_name == "Resultado":
-            xml_data = self.shared_data.get(
-                "current_xml", "<Erro>Nenhum XML encontrado.</Erro>"
-            )
+            xml = self.shared_data.get("current_xml", "<Erro>Nenhum XML.</Erro>")
             if hasattr(frame, "set_xml"):
-                getattr(frame, "set_xml")(xml_data)
+                getattr(frame, "set_xml")(xml)
 
+        self._update_nav_highlight(frame_name)
         frame.tkraise()
 
-    # ------------------------- AppBar -------------------------
-    def _build_appbar(self):
-        appbar = ctk.CTkFrame(self, fg_color=APPBAR_BG, corner_radius=0)
-        appbar.grid(row=0, column=0, sticky="ew")
-        appbar.grid_columnconfigure(0, weight=1)
+    def _update_nav_highlight(self, active_key: str) -> None:
+        for key, btn in self._nav_buttons.items():
+            if key == active_key:
+                btn.configure(fg_color=c(SIDEBAR_ACTIVE), text_color=c(COLOR_TEXT))
+            else:
+                btn.configure(fg_color="transparent", text_color=c(COLOR_TEXT_MUTED))
 
-        title = ctk.CTkLabel(
-            appbar,
-            text=APP_NAME,
-            text_color=APPBAR_FG[0],
-            font=ctk.CTkFont(size=16, weight="bold"),
-        )
-        title.grid(row=0, column=0, sticky="w", padx=18, pady=12)
+    # ── Window utilities ─────────────────────────────────────────────────────
 
-        btn_home = ctk.CTkButton(
-            appbar,
-            text="Menu",
-            fg_color=PRIMARY,
-            hover_color=PRIMARY_HOVER,
-            text_color="black",
-            height=32,
-            command=lambda: self.show_frame("MenuPrincipal"),
-        )
-        btn_home.grid(row=0, column=1, sticky="e", padx=12, pady=8)
+    def _toggle_fullscreen(self) -> None:
+        self.is_fullscreen = not self.is_fullscreen
+        try:
+            self.attributes("-fullscreen", self.is_fullscreen)
+        except Exception:
+            if self.is_fullscreen:
+                self.state("zoomed")
 
-    # ------------------------- Utilidades -------------------------
-    def _center_window(self):
+    def _exit_fullscreen(self) -> None:
+        self.is_fullscreen = False
+        try:
+            self.attributes("-fullscreen", False)
+        except Exception:
+            pass
+
+    def _center_window(self) -> None:
         self.update_idletasks()
-        sw = self.winfo_screenwidth()
-        sh = self.winfo_screenheight()
-        x = (sw // 2) - (DEFAULT_WIDTH // 2)
-        y = (sh // 2) - (DEFAULT_HEIGHT // 2)
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        x = (sw - DEFAULT_WIDTH) // 2
+        y = (sh - DEFAULT_HEIGHT) // 2
         self.geometry(f"+{x}+{y}")
-        logging.info(f"Janela centralizada em: x={x}, y={y}")
 
-    def _load_app_icon(self):
+    def _load_app_icon(self) -> None:
         try:
             if os.path.exists(ICON_PATH):
                 self.iconbitmap(ICON_PATH)
-                logging.info(f"Ícone '{ICON_PATH}' carregado com sucesso.")
-            else:
-                logging.warning(f"Arquivo de ícone não encontrado: {ICON_PATH}")
-        except Exception as e:
-            logging.error(f"Não foi possível carregar o ícone: {e}")
+        except Exception as exc:
+            logging.warning(f"Icone nao carregado: {exc}")
 
+
+# ── Home / welcome screen ────────────────────────────────────────────────────
 
 class MenuPrincipalFrame(ctk.CTkFrame):
-    """Menu principal em estilo "cards" com CustomTkinter, com seções por categoria."""
+    """
+    Welcome / dashboard screen shown on startup.
 
-    def __init__(self, parent: tk.Widget, controller: "AppController"):
+    Features clickable module cards; navigation is also available
+    via the persistent sidebar at all times.
+    """
+
+    _CARDS = [
+        {
+            "title": "Gerador de XML - Servico 207",
+            "desc":  "Crie arquivos XML para integracao com o Mega ERP.",
+            "frame": "Gerador207",
+        },
+        {
+            "title": "Integracao SOAP",
+            "desc":  "Envie payloads XML em lote para um endpoint SOAP.",
+            "frame": "FerramentaSOAP",
+        },
+        {
+            "title": "Trace Interpreter",
+            "desc":  "Analise traces JSON e extraia SQLs para depuracao.",
+            "frame": "TraceInterpreter",
+        },
+    ]
+
+    def __init__(self, parent: tk.Widget, controller: "AppController") -> None:
         super().__init__(parent, fg_color="transparent")
         self.controller = controller
-
-        self.icons: Dict[str, Union[ctk.CTkImage, None]] = {
-            "soap": self._load_icon(SOAP_ICON_PATH, (38, 38)),
-            "xml": self._load_icon(XML_ICON_PATH, (38, 38)),
-            "trace": self._load_icon(TRACE_ICON_PATH, (38, 38)),
-        }
-
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
+        self._build()
 
-        integrador_items = [
-            {
-                "title": "Gerador de XML - Serviço 207",
-                "desc": "Crie arquivos XML para integração ao Mega ERP.",
-                "command": lambda: self.controller.show_frame("Gerador207"),
-                "icon": self.icons.get("xml"),
-            },
-            {
-                "title": "Integração SOAP",
-                "desc": "Envie XML para um endpoint SOAP.",
-                "command": lambda: self.controller.show_frame("FerramentaSOAP"),
-                "icon": self.icons.get("soap"),
-            },
-        ]
+    def _build(self) -> None:
+        # -- Page header -----------------------------------------------------
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.grid(row=0, column=0, sticky="ew",
+                    padx=SPACE_XL, pady=(SPACE_XL, SPACE_MD))
 
-        self._create_section(row=1, title="Serviços Integrador", items=integrador_items)
+        ctk.CTkLabel(
+            header,
+            text="Bem-vindo ao Pytegrator",
+            font=ctk.CTkFont(size=FONT_2XL, weight="bold"),
+            text_color=c(COLOR_TEXT),
+            anchor="w",
+        ).pack(anchor="w")
 
-        ferramentas_items = [
-            {
-                "title": "Interpretador de Trace",
-                "desc": "Analise traces JSON e extraia SQL para depuração.",
-                "command": lambda: self.controller.show_frame("TraceInterpreter"),
-                "icon": self.icons.get("trace"),
-            },
-        ]
+        ctk.CTkLabel(
+            header,
+            text="Integracao com Mega ERP  -  XML, SOAP e Trace",
+            font=ctk.CTkFont(size=FONT_MD),
+            text_color=c(COLOR_TEXT_MUTED),
+            anchor="w",
+        ).pack(anchor="w", pady=(4, 0))
 
-        self._create_section(row=2, title="Ferramentas", items=ferramentas_items)
+        # -- Divider ---------------------------------------------------------
+        ctk.CTkFrame(
+            self, fg_color=c(COLOR_BORDER), height=1, corner_radius=0
+        ).grid(row=1, column=0, sticky="ew", padx=SPACE_XL)
 
-    def _create_section(self, row: int, title: str, items: List[Dict[str, Any]]):
-        """Renderiza uma *categoria* destacada (chip + divisor) e abaixo os cards.
-        Remove o "cardzão" de seção e deixa o foco nos itens.
-        """
-        # Container da seção (transparente)
-        section = ctk.CTkFrame(self, fg_color="transparent")
-        section.grid(row=row, column=0, sticky="nsew", padx=14, pady=(4, 10))
-        section.grid_columnconfigure(0, weight=1)
+        # -- Cards -----------------------------------------------------------
+        cards_frame = ctk.CTkFrame(self, fg_color="transparent")
+        cards_frame.grid(row=2, column=0, sticky="nsew",
+                         padx=SPACE_XL, pady=SPACE_XL)
+        for i in range(len(self._CARDS)):
+            cards_frame.grid_columnconfigure(i, weight=1, uniform="home_cards")
 
-        # CHIP de categoria
-        chip = ctk.CTkFrame(
-            section,
-            fg_color=APPBAR_BG,  # leve contraste
-            border_color=PRIMARY[0],
-            border_width=1,
-            corner_radius=999,
-        )
-        chip.grid(row=0, column=0, sticky="w", padx=2, pady=(2, 6))
+        for col, card_data in enumerate(self._CARDS):
+            self._make_card(cards_frame, col, card_data)
 
-        chip_label = ctk.CTkLabel(
-            chip,
-            text=title.upper(),
-            font=ctk.CTkFont(size=12, weight="bold"),
-            text_color=PRIMARY[0],
-        )
-        chip_label.grid(row=0, column=0, padx=12, pady=6)
-
-        # Divisor fino
-        divider = ctk.CTkFrame(section, fg_color=BORDER[0], height=1, corner_radius=1)
-        divider.grid(row=1, column=0, sticky="ew")
-
-        # Área de cards
-        content = ctk.CTkFrame(section, fg_color="transparent")
-        content.grid(row=2, column=0, sticky="nsew", pady=(6, 0))
-        for c in range(3):
-            content.grid_columnconfigure(c, weight=1, uniform=f"cards_{row}")
-
-        for i, item in enumerate(items):
-            card = self._create_menu_card(content, **item)
-            card.grid(row=i // 3, column=i % 3, sticky="nsew", padx=8, pady=6)
-
-    def _create_menu_card(
-        self,
-        parent: ctk.CTkFrame,
-        title: str,
-        desc: str,
-        command: Callable[[], None],
-        icon: Union[ctk.CTkImage, None],
-    ) -> ctk.CTkFrame:
+    def _make_card(self, parent: ctk.CTkFrame, col: int, data: dict) -> None:
         card = ctk.CTkFrame(
             parent,
-            fg_color=SURFACE,
-            corner_radius=14,
+            fg_color=c(COLOR_SURFACE),
+            corner_radius=RADIUS_LG,
             border_width=1,
-            border_color=BORDER,
+            border_color=c(COLOR_BORDER),
+            cursor="hand2",
         )
-        card.grid_columnconfigure(1, weight=1)
+        card.grid(row=0, column=col, sticky="nsew", padx=SPACE_SM)
+        card.grid_columnconfigure(0, weight=1)
 
-        if icon:
-            icon_lbl = ctk.CTkLabel(card, image=icon, text="")
-            icon_lbl.grid(
-                row=0, column=0, rowspan=2, sticky="nsw", padx=(14, 14), pady=16
-            )
-
-        title_lbl = ctk.CTkLabel(
+        ctk.CTkLabel(
             card,
-            text=title,
-            font=ctk.CTkFont(size=13, weight="bold"),
-            text_color=TEXT[0],
-        )
-        title_lbl.grid(row=0, column=1, sticky="ew", padx=16, pady=(18, 0))
-
-        # Descrição — com padding lateral e wrap controlado para não encostar no limite
-        desc_lbl = ctk.CTkLabel(
-            card,
-            text=desc,
-            font=ctk.CTkFont(size=12),
-            text_color=TEXT_MUTED[0],
-            wraplength=250,
-            justify="left",
+            text=data["title"],
+            font=ctk.CTkFont(size=FONT_MD, weight="bold"),
+            text_color=c(COLOR_TEXT),
             anchor="w",
-        )
-        desc_lbl.grid(row=1, column=1, sticky="ew", padx=16, pady=(2, 16))
+            wraplength=260,
+        ).grid(row=0, column=0, sticky="ew",
+               padx=SPACE_LG, pady=(SPACE_LG, SPACE_SM))
 
-        btn = ctk.CTkButton(
+        ctk.CTkLabel(
+            card,
+            text=data["desc"],
+            font=ctk.CTkFont(size=FONT_SM),
+            text_color=c(COLOR_TEXT_MUTED),
+            anchor="w",
+            justify="left",
+            wraplength=260,
+        ).grid(row=1, column=0, sticky="ew",
+               padx=SPACE_LG, pady=(0, SPACE_MD))
+
+        ctk.CTkButton(
             card,
             text="Abrir",
-            height=32,
-            fg_color=PRIMARY,
-            hover_color=PRIMARY_HOVER,
-            text_color="black",
-            command=command,
-        )
-        btn.grid(row=2, column=1, sticky="e", padx=16, pady=(0, 16))
+            height=30,
+            corner_radius=RADIUS_MD,
+            fg_color=c(COLOR_ACCENT),
+            hover_color=c(COLOR_ACCENT_HOVER),
+            text_color="white",
+            font=ctk.CTkFont(size=FONT_SM, weight="bold"),
+            command=lambda k=data["frame"]: self.controller.show_frame(k),
+        ).grid(row=2, column=0, sticky="w",
+               padx=SPACE_LG, pady=(0, SPACE_LG))
 
-        def on_enter(_):
-            card.configure(fg_color=CARD_HOVER)
+        def _enter(_e, f=card):
+            f.configure(fg_color=c(COLOR_SURFACE_ALT))
 
-        def on_leave(_):
-            card.configure(fg_color=SURFACE)
+        def _leave(_e, f=card):
+            f.configure(fg_color=c(COLOR_SURFACE))
 
-        for w in (card, title_lbl, desc_lbl):
-            w.bind("<Enter>", on_enter)
-            w.bind("<Leave>", on_leave)
-            w.bind("<Button-1>", lambda _e: command())
-            w.configure(cursor="hand2")
+        def _click(_e, k=data["frame"]):
+            self.controller.show_frame(k)
 
-        # Ajuste responsivo do wraplength conforme largura do card
-        def _resize_wrap(_event=None):
-            try:
-                # margem interna total ~ 32 (16 esquerda + 16 direita)
-                # ícone ocupa a coluna 0, então consideramos apenas a coluna 1
-                available = max(220, card.winfo_width() - 80)
-                desc_lbl.configure(wraplength=available)
-            except Exception:
-                pass
-
-        card.bind("<Configure>", _resize_wrap)
-        _resize_wrap()
-
-        return card
-
-    def _load_icon(
-        self, file_path: str, size: tuple[int, int]
-    ) -> Union[ctk.CTkImage, None]:
-        if not os.path.exists(file_path):
-            logging.warning(f"Arquivo de ícone não encontrado: {file_path}")
-            return None
-        try:
-            return ctk.CTkImage(Image.open(file_path), size=size)
-        except Exception as e:
-            logging.error(f"Falha ao carregar ícone '{file_path}': {e}")
-            return None
+        card.bind("<Enter>", _enter)
+        card.bind("<Leave>", _leave)
+        card.bind("<Button-1>", _click)
 
 
-# --- Ponto de Entrada da Aplicação ---
-def main():
+# ── Entry point ──────────────────────────────────────────────────────────────
+
+def main() -> None:
     try:
         setup_environment()
 
         if sys.platform.startswith("win"):
-            app_id = f"MyCompany.{APP_NAME}.1.0"
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
-            logging.info(f"AppUserModelID definido como: {app_id}")
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                "Pytegrator.App.1"
+            )
 
-        logging.info("Aplicação iniciada. Carregando recursos…")
+        logging.info("Carregando recursos...")
         codigoMapper.carregar_mapa_codigos()
-        logging.info("Mapa de códigos carregado com sucesso.")
+        logging.info("Mapa de codigos carregado.")
 
         app = AppController()
         app.mainloop()
-        logging.info("Aplicação encerrada normalmente.")
+        logging.info("Aplicacao encerrada normalmente.")
 
-    except Exception as e:
-        logging.critical(f"ERRO CRÍTICO NA INICIALIZAÇÃO: {e}", exc_info=True)
+    except Exception as exc:
+        logging.critical(f"ERRO CRITICO: {exc}", exc_info=True)
         root = tk.Tk()
         root.withdraw()
-        messagebox.showerror("Erro Crítico", f"Falha ao iniciar a aplicação:\n\n{e}")
+        messagebox.showerror("Erro Critico", f"Falha ao iniciar:\n\n{exc}")
         root.destroy()
 
 
